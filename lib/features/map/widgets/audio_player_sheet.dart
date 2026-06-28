@@ -6,10 +6,7 @@ import '../../../core/services/global_audio_player.dart';
 class AudioPlayerSheet extends StatelessWidget {
   final AudioPost post;
 
-  const AudioPlayerSheet({
-    super.key,
-    required this.post,
-  });
+  const AudioPlayerSheet({super.key, required this.post});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +21,10 @@ class AudioPlayerSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text("پست صوتی", style: TextStyle(color: Colors.white, fontSize: 18)),
+          Text(
+            "پست صوتی",
+            style: const TextStyle(color: Colors.white, fontSize: 18),
+          ),
           const SizedBox(height: 8),
           Text(
             post.createdAt.toString().substring(0, 16),
@@ -33,7 +33,9 @@ class AudioPlayerSheet extends StatelessWidget {
           const SizedBox(height: 20),
 
           Obx(() {
-            final isThisPlaying = player.currentUrl.value == post.audioUrl && player.isPlaying.value;
+            final isThisPlaying =
+                player.currentUrl.value == post.audioUrl &&
+                player.isPlaying.value;
             return Column(
               children: [
                 Icon(
@@ -41,7 +43,6 @@ class AudioPlayerSheet extends StatelessWidget {
                   size: 80,
                   color: Colors.purple,
                 ),
-                const SizedBox(height: 10),
                 Text(
                   isThisPlaying ? 'در حال پخش...' : 'آماده پخش',
                   style: const TextStyle(color: Colors.white),
@@ -51,32 +52,21 @@ class AudioPlayerSheet extends StatelessWidget {
           }),
 
           const SizedBox(height: 20),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               ElevatedButton.icon(
-                onPressed: () {
-                  player.play(post.audioUrl, post.id);
-                },
+                onPressed: () => player.play(post.audioUrl, post.id),
                 icon: const Icon(Icons.play_arrow),
                 label: const Text("پخش"),
               ),
               ElevatedButton.icon(
-                onPressed: () {
-                  player.stop();
-                },
+                onPressed: () => player.stop(),
                 icon: const Icon(Icons.stop),
                 label: const Text("توقف"),
               ),
             ],
           ),
-
-          const SizedBox(height: 16),
-          Obx(() => Text(
-            "❤️ ${post.likes}   ▶ ${post.plays}",
-            style: const TextStyle(color: Colors.white),
-          )),
         ],
       ),
     );

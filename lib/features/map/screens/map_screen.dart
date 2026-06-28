@@ -24,14 +24,11 @@ class MapScreen extends StatelessWidget {
                 initialCenter: controller.tehranCenter,
                 initialZoom: 11,
                 onPositionChanged: (position, hasGesture) {
-                  final zoom = position.zoom;
-                  if (zoom != null) {
-                    controller.updateZoom(zoom);
+                  if (position.zoom != null) {
+                    controller.updateZoom(position.zoom!);
                   }
-
-                  final bounds = position.bounds;
-                  if (bounds != null) {
-                    controller.updateBounds(bounds);
+                  if (position.bounds != null) {
+                    controller.updateBounds(position.bounds!);
                   }
                 },
               ),
@@ -42,7 +39,6 @@ class MapScreen extends StatelessWidget {
                   subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.tehransound.app',
                 ),
-
                 MarkerClusterLayerWidget(
                   options: MarkerClusterLayerOptions(
                     maxClusterRadius: 90,
@@ -60,12 +56,11 @@ class MapScreen extends StatelessWidget {
                               context: context,
                               builder: (_) => AudioPlayerSheet(
                                 post: post,
-                                onPlay: () {
-                                  controller.playAudio(post.audioUrl, post.id);
-                                },
-                                onStop: () {
-                                  controller.stopAudio();
-                                },
+                                onPlay: () => controller.playAudio(
+                                  post.audioUrl,
+                                  post.id,
+                                ),
+                                onStop: () => controller.stopAudio(),
                               ),
                             );
                           },
@@ -97,13 +92,11 @@ class MapScreen extends StatelessWidget {
                 ),
               ],
             ),
-
             if (controller.isLoading.value)
               const Center(child: CircularProgressIndicator()),
           ],
         );
       }),
-
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -113,8 +106,8 @@ class MapScreen extends StatelessWidget {
             child: const Icon(Icons.my_location),
           ),
           const SizedBox(height: 10),
-          Obx(() {
-            return FloatingActionButton(
+          Obx(
+            () => FloatingActionButton(
               heroTag: "rec",
               backgroundColor: controller.isRecordingAudio.value
                   ? Colors.red
@@ -129,8 +122,8 @@ class MapScreen extends StatelessWidget {
               child: Icon(
                 controller.isRecordingAudio.value ? Icons.stop : Icons.mic,
               ),
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );

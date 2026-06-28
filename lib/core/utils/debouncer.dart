@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 class Debouncer {
   final Duration delay;
@@ -11,7 +12,5 @@ class Debouncer {
     _timer = Timer(delay, action);
   }
 
-  void cancel() {
-    _timer?.cancel();
-  }
+  void cancel() => _timer?.cancel();
 }

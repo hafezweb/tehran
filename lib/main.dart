@@ -4,8 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app_shell.dart';
 import 'features/map/controller/map_controller.dart';
-import 'core/services/global_audio_player.dart';
 import 'core/repositories/audio_repository.dart';
+import 'core/services/global_audio_player.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,14 +15,9 @@ void main() async {
     anonKey: 'sb_publishable_Heto8IH3Xs9sbdxML35VHA_Y-bDMXnD',
   );
 
-  print(
-    "CURRENT USER: ${Supabase.instance.client.auth.currentUser}",
-  );
-
-  // Register controllers
-  Get.put(MapControllerX());
+  Get.put(AudioRepository());
   Get.put(GlobalAudioPlayer());
-  Get.put(AudioRepository()); // Central repository
+  Get.put(MapControllerX());
 
   runApp(const MyApp());
 }

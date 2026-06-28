@@ -8,17 +8,12 @@ class SupabaseService {
   Future<String> uploadAudio(String fileName, dynamic file) async {
     try {
       print("UPLOAD STARTED: $fileName");
-      print("FILE EXISTS: ${file.existsSync()}");
-      print("FILE PATH: ${file.path}");
-
       await client.storage
           .from('audio')
           .upload(fileName, file, fileOptions: const FileOptions(upsert: true));
 
       final url = client.storage.from('audio').getPublicUrl(fileName);
-
       print("UPLOAD SUCCESS: $url");
-
       return url;
     } catch (e) {
       print("UPLOAD ERROR: $e");
@@ -27,18 +22,20 @@ class SupabaseService {
   }
 
   Future<void> incrementPlay(String postId) async {
-    final post = await client
-        .from('audio_posts')
-        .select('plays')
-        .eq('id', postId)
-        .single();
-
-    final currentPlays = post['plays'] ?? 0;
-
-    await client
-        .from('audio_posts')
-        .update({'plays': currentPlays + 1})
-        .eq('id', postId);
+    try {
+      final post = await client
+          .from('audio_posts')
+          .select('plays')
+          .eq('id', postId)
+          .single();
+      final currentPlays = post['plays'] ?? 0;
+      await client
+          .from('audio_posts')
+          .update({'plays': currentPlays + 1})
+          .eq('id', postId);
+    } catch (e) {
+      print("Increment Play Error: $e");
+    }
   }
 
   Future<List<Map<String, dynamic>>> getFeed() async {
@@ -46,7 +43,6 @@ class SupabaseService {
         .from('audio_posts')
         .select()
         .order('created_at', ascending: false);
-
     return List<Map<String, dynamic>>.from(res);
   }
 
@@ -80,5 +76,23 @@ class SupabaseService {
           .eq('user_id', uid)
           .eq('post_id', postId);
     }
+  }
+
+  // متد جدید برای رفع خطا
+  Future<List<Map<String, dynamic>>> getPostsInBounds({
+    required double north,
+    required double south,
+    required double east,
+    required double west,
+  }) async {
+    final res = await client
+        .from('audio_posts')
+        .select()
+        .gte('lat', south)
+        .lte('lat', north)
+        .gte('lng', west)
+        .lte('lng', east)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(res);
   }
 }

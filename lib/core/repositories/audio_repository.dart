@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/audio_post.dart';
 import '../services/supabase_service.dart';
@@ -15,52 +15,52 @@ class AudioRepository {
     SupabaseService? supabaseService,
     LocationService? locationService,
     AudioService? audioService,
-  })  : _supabaseService = supabaseService ?? SupabaseService(),
-        _locationService = locationService ?? LocationService(),
-        _audioService = audioService ?? AudioService();
+  }) : _supabaseService = supabaseService ?? SupabaseService(),
+       _locationService = locationService ?? LocationService(),
+       _audioService = audioService ?? AudioService();
 
-  // ================= RECORDING =================
-  Future<bool> startRecording() async {
-    return await _audioService.startRecording();
-  }
+  Future<bool> startRecording() => _audioService.startRecording();
 
-  Future<Position?> getCurrentLocation() async {
-    return await _locationService.getCurrent();
-  }
+  Future<String?> stopRecording() => _audioService.stopRecording();
 
-  // ================= CREATE POST =================
+  Future<Position?> getCurrentLocation() => _locationService.getCurrent();
+
   Future<String?> createAudioPost() async {
-    final path = await _audioService.stopRecording();
+    final path = await stopRecording();
     if (path == null) return null;
 
     try {
-      final pos = await _locationService.getCurrent();
+      final pos = await getCurrentLocation();
       if (pos == null) return null;
 
       final fileName = 'audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
       final url = await _supabaseService.uploadAudio(fileName, File(path));
 
-      final response = await _supabaseService.client.from('audio_posts').insert({
-        'user_id': _supabaseService.userId,
-        'audio_url': url,
-        'lat': pos.latitude,
-        'lng': pos.longitude,
-        'likes': 0,
-        'plays': 0,
-        'created_at': DateTime.now().toIso8601String(),
-      }).select().single();
+      final response = await _supabaseService.client
+          .from('audio_posts')
+          .insert({
+            'user_id': _supabaseService.userId,
+            'audio_url': url,
+            'lat': pos.latitude,
+            'lng': pos.longitude,
+            'likes': 0,
+            'plays': 0,
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
 
-      return response['id'];
+      return response['id'] as String?;
     } catch (e) {
       print("Create Audio Post Error: $e");
       return null;
     }
   }
 
-  // ================= BOUNDS-AWARE FEED =================
   Stream<List<AudioPost>> watchAllPosts() {
-    return _supabaseService.streamAudioPosts().map((data) =>
-        data.map((e) => AudioPost.fromJson(e)).toList());
+    return _supabaseService.streamAudioPosts().map(
+      (data) => data.map((e) => AudioPost.fromJson(e)).toList(),
+    );
   }
 
   Future<List<AudioPost>> getPostsInBounds({
@@ -83,28 +83,16 @@ class AudioRepository {
     }
   }
 
-  // ================= PLAYBACK (delegates to global) =================
   Future<void> playAudio(String url, String postId) async {
-    final player = GlobalAudioPlayer.instance;
+    final player = Get.find<GlobalAudioPlayer>();
     await player.play(url, postId);
     await _supabaseService.incrementPlay(postId);
   }
 
   Future<void> stopAudio() async {
-    final player = GlobalAudioPlayer.instance;
+    final player = Get.find<GlobalAudioPlayer>();
     await player.stop();
   }
 
-  void disposeIfNeeded() {
-    _audioService.dispose();
-  }
-
-  // ================= LIKE =================
-  Future<void> toggleLike(String postId) async {
-    try {
-      await _supabaseService.toggleLike(postId);
-    } catch (e) {
-      print("Like Error: $e");
-    }
-  }
+  Future<void> toggleLike(String postId) => _supabaseService.toggleLike(postId);
 }

@@ -5,7 +5,7 @@ import '../models/audio_post.dart';
 import '../services/supabase_service.dart';
 import '../services/location_service.dart';
 import '../services/audio_service.dart';
-import 'global_audio_player.dart'; // مهم
+import 'global_audio_player.dart';
 
 class AudioRepository {
   final SupabaseService _supabaseService;
@@ -41,7 +41,18 @@ class AudioRepository {
     required double east,
     required double west,
   }) async {
-    // کد قبلی
+    try {
+      final data = await _supabaseService.getPostsInBounds(
+        north: north,
+        south: south,
+        east: east,
+        west: west,
+      );
+      return data.map((e) => AudioPost.fromJson(e)).toList();
+    } catch (e) {
+      print("Bounds Error: $e");
+      return [];
+    }
   }
 
   Future<void> playAudio(String url, String postId) async {

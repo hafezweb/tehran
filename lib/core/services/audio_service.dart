@@ -1,54 +1,41 @@
 import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AudioService {
   final AudioRecorder _recorder = AudioRecorder();
-  bool _isRecording = false;
 
-  bool get isRecording => _isRecording;
+  String? _recordPath;
 
-  Future<void> startRecording() async {
-    try {
-      if (_isRecording) return;
+  bool isRecording = false;
 
-      final hasPermission = await _recorder.hasPermission();
-      if (!hasPermission) {
-        throw Exception('Microphone permission denied');
-      }
+  Future<bool> startRecording() async {
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) return false;
 
-      await _recorder.start();
+    final dir = await getTemporaryDirectory();
 
-      _isRecording = true;
-    } catch (e) {
-      _isRecording = false;
-      rethrow;
-    }
+    _recordPath =
+        '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: _recordPath!,
+    );
+
+    isRecording = true;
+    return true;
   }
 
   Future<String?> stopRecording() async {
-    try {
-      if (!_isRecording) return null;
+    final path = await _recorder.stop();
 
-      final path = await _recorder.stop();
+    print("RECORDED FILE PATH: $path");
 
-      _isRecording = false;
-
-      if (path == null || path.isEmpty) {
-        return null;
-      }
-
-      return path;
-    } catch (e) {
-      _isRecording = false;
-      rethrow;
-    }
+    isRecording = false;
+    return path;
   }
 
-  Future<void> dispose() async {
-    if (_isRecording) {
-      await _recorder.stop();
-      _isRecording = false;
-    }
-
-    await _recorder.dispose();
+  void dispose() {
+    _recorder.dispose();
   }
 }

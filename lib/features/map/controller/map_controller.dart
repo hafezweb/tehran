@@ -1,13 +1,11 @@
-import 'dart:async';
-
 import 'package:get/get.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-
 import '../../../core/repositories/audio_repository.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/audio_service.dart';
 import '../../../core/models/audio_post.dart';
+import 'dart:async';
 
 class MapControllerX extends GetxController {
   final AudioRepository repository = Get.find<AudioRepository>();
@@ -40,10 +38,11 @@ class MapControllerX extends GetxController {
 
   Future<void> loadInitialFeed() async {
     isLoading.value = true;
-
     try {
-      final posts = await repository.getFeed();
-      audioPosts.assignAll(posts);
+      // قبلاً: repository._supabaseService.getFeed() -> ارور کامپایل
+      // الان: از طریق getter عمومی repository.supabaseService
+      final res = await repository.supabaseService.getFeed();
+      audioPosts.assignAll(res.map((e) => AudioPost.fromJson(e)).toList());
     } catch (e) {
       print("Load Feed Error: $e");
     } finally {
@@ -59,7 +58,6 @@ class MapControllerX extends GetxController {
     try {
       final pos = await locationService.getCurrent();
       if (pos == null) return;
-
       mapController.move(LatLng(pos.latitude, pos.longitude), 15);
     } catch (e) {
       print("Location Error: $e");
@@ -68,7 +66,6 @@ class MapControllerX extends GetxController {
 
   Future<void> startAudioRecording() async {
     final started = await repository.startRecording();
-
     if (started) {
       isRecordingAudio.value = true;
     }
@@ -77,10 +74,8 @@ class MapControllerX extends GetxController {
   Future<void> stopAudioRecording() async {
     isRecordingAudio.value = false;
     isLoading.value = true;
-
     try {
       final postId = await repository.createAudioPost();
-
       if (postId != null) {
         await loadInitialFeed();
       }

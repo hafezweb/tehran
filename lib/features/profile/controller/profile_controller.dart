@@ -1,11 +1,9 @@
 import 'package:get/get.dart';
 import '../../../core/repositories/audio_repository.dart';
 import '../../../core/models/audio_post.dart';
-import '../../../core/services/global_audio_player.dart';
 
 class ProfileController extends GetxController {
   final AudioRepository repository = Get.find<AudioRepository>();
-  final GlobalAudioPlayer globalPlayer = Get.find<GlobalAudioPlayer>();
 
   final myPosts = <AudioPost>[].obs;
   final isLoading = false.obs;
@@ -19,16 +17,18 @@ class ProfileController extends GetxController {
   Future<void> loadMyPosts() async {
     try {
       isLoading.value = true;
-      // For now use a simple query - can be extended in repository
-      final res = await repository._supabaseService.client // temporary, better to add method to repo
+      final uid = repository._supabaseService.userId; // temporary
+      if (uid == null) return;
+
+      final res = await repository._supabaseService.client
           .from('audio_posts')
           .select()
-          .eq('user_id', repository._supabaseService.userId)
+          .eq('user_id', uid)
           .order('created_at', ascending: false);
 
       myPosts.value = res.map((e) => AudioPost.fromJson(e)).toList();
     } catch (e) {
-      SnackbarHelper.error('خطا در بارگذاری پست‌ها');
+      print("Profile Load Error: $e");
     } finally {
       isLoading.value = false;
     }
@@ -36,6 +36,6 @@ class ProfileController extends GetxController {
 
   Future<void> toggleLike(String postId) async {
     await repository.toggleLike(postId);
-    await loadMyPosts(); // refresh
+    await loadMyPosts();
   }
 }

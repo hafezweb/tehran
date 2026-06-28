@@ -25,32 +25,21 @@ class AudioPlayerSheet extends StatelessWidget {
             "پست صوتی",
             style: const TextStyle(color: Colors.white, fontSize: 18),
           ),
-          const SizedBox(height: 8),
           Text(
             post.createdAt.toString().substring(0, 16),
             style: const TextStyle(color: Colors.grey),
           ),
           const SizedBox(height: 20),
-
           Obx(() {
-            final isThisPlaying =
+            final isPlaying =
                 player.currentUrl.value == post.audioUrl &&
                 player.isPlaying.value;
-            return Column(
-              children: [
-                Icon(
-                  isThisPlaying ? Icons.pause_circle : Icons.play_circle,
-                  size: 80,
-                  color: Colors.purple,
-                ),
-                Text(
-                  isThisPlaying ? 'در حال پخش...' : 'آماده پخش',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
+            return Icon(
+              isPlaying ? Icons.pause_circle : Icons.play_circle,
+              size: 80,
+              color: Colors.purple,
             );
           }),
-
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,

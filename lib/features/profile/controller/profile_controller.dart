@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+
 import '../../../core/repositories/audio_repository.dart';
 import '../../../core/models/audio_post.dart';
 
@@ -17,16 +18,9 @@ class ProfileController extends GetxController {
   Future<void> loadMyPosts() async {
     try {
       isLoading.value = true;
-      final uid = repository._supabaseService.userId; // temporary
-      if (uid == null) return;
 
-      final res = await repository._supabaseService.client
-          .from('audio_posts')
-          .select()
-          .eq('user_id', uid)
-          .order('created_at', ascending: false);
-
-      myPosts.value = res.map((e) => AudioPost.fromJson(e)).toList();
+      final posts = await repository.getMyPosts();
+      myPosts.assignAll(posts);
     } catch (e) {
       print("Profile Load Error: $e");
     } finally {

@@ -1,54 +1,54 @@
 import 'package:record/record.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:path_provider/path_provider.dart';
 
 class AudioService {
   final AudioRecorder _recorder = AudioRecorder();
-  final AudioPlayer _player = AudioPlayer();
+  bool _isRecording = false;
 
-  String? _recordPath;
+  bool get isRecording => _isRecording;
 
-  bool isRecording = false;
+  Future<void> startRecording() async {
+    try {
+      if (_isRecording) return;
 
-  Future<bool> startRecording() async {
-    final hasPermission = await _recorder.hasPermission();
-    if (!hasPermission) return false;
+      final hasPermission = await _recorder.hasPermission();
+      if (!hasPermission) {
+        throw Exception('Microphone permission denied');
+      }
 
-    final dir = await getTemporaryDirectory();
+      await _recorder.start();
 
-    _recordPath =
-        '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-    await _recorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc),
-      path: _recordPath!,
-    );
-
-    isRecording = true;
-    return true;
+      _isRecording = true;
+    } catch (e) {
+      _isRecording = false;
+      rethrow;
+    }
   }
 
   Future<String?> stopRecording() async {
-    final path = await _recorder.stop();
+    try {
+      if (!_isRecording) return null;
 
-    print("RECORDED FILE PATH: $path");
+      final path = await _recorder.stop();
 
-    isRecording = false;
-    return path;
+      _isRecording = false;
+
+      if (path == null || path.isEmpty) {
+        return null;
+      }
+
+      return path;
+    } catch (e) {
+      _isRecording = false;
+      rethrow;
+    }
   }
 
-  Future<void> play(String url) async {
-    await _player.stop();
-    await _player.setUrl(url);
-    await _player.play();
-  }
+  Future<void> dispose() async {
+    if (_isRecording) {
+      await _recorder.stop();
+      _isRecording = false;
+    }
 
-  Future<void> stop() async {
-    await _player.stop();
-  }
-
-  void dispose() {
-    _recorder.dispose();
-    _player.dispose();
+    await _recorder.dispose();
   }
 }

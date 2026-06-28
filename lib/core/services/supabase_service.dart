@@ -1,98 +1,93 @@
+import 'dart:io';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/audio_post.dart';
+
 class SupabaseService {
-  final client = Supabase.instance.client;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  String? get userId => client.auth.currentUser?.id;
-
-  Future<String> uploadAudio(String fileName, dynamic file) async {
+  Future<String?> uploadAudio(File file, String fileName) async {
     try {
-      print("UPLOAD STARTED: $fileName");
-      await client.storage
-          .from('audio')
-          .upload(fileName, file, fileOptions: const FileOptions(upsert: true));
+      if (!file.existsSync()) {
+        return null;
+      }
 
-      final url = client.storage.from('audio').getPublicUrl(fileName);
-      print("UPLOAD SUCCESS: $url");
-      return url;
-    } catch (e) {
-      print("UPLOAD ERROR: $e");
-      rethrow;
+      await _supabase.storage.from('audio_posts').upload(fileName, file);
+
+      return _supabase.storage.from('audio_posts').getPublicUrl(fileName);
+    } catch (_) {
+      return null;
     }
   }
 
-  Future<void> incrementPlay(String postId) async {
-    try {
-      final post = await client
-          .from('audio_posts')
-          .select('plays')
-          .eq('id', postId)
-          .single();
-      final currentPlays = post['plays'] ?? 0;
-      await client
-          .from('audio_posts')
-          .update({'plays': currentPlays + 1})
-          .eq('id', postId);
-    } catch (e) {
-      print("Increment Play Error: $e");
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> getFeed() async {
-    final res = await client
-        .from('audio_posts')
-        .select()
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(res);
-  }
-
-  Stream<List<Map<String, dynamic>>> streamAudioPosts() {
-    return client
-        .from('audio_posts')
-        .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false)
-        .map((data) => List<Map<String, dynamic>>.from(data));
-  }
-
-  Future<void> toggleLike(String postId) async {
-    final uid = userId;
-    if (uid == null) return;
-
-    final exists = await client
-        .from('audio_likes')
-        .select('id')
-        .eq('user_id', uid)
-        .eq('post_id', postId);
-
-    if (exists.isEmpty) {
-      await client.from('audio_likes').insert({
-        'user_id': uid,
-        'post_id': postId,
-      });
-    } else {
-      await client
-          .from('audio_likes')
-          .delete()
-          .eq('user_id', uid)
-          .eq('post_id', postId);
-    }
-  }
-
-  // متد جدید برای رفع خطا
-  Future<List<Map<String, dynamic>>> getPostsInBounds({
-    required double north,
-    required double south,
-    required double east,
-    required double west,
+  Future<Map<String, dynamic>?> createAudioPost({
+    required String audioUrl,
+    required double lat,
+    required double lng,
   }) async {
-    final res = await client
-        .from('audio_posts')
-        .select()
-        .gte('lat', south)
-        .lte('lat', north)
-        .gte('lng', west)
-        .lte('lng', east)
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(res);
+    try {
+      final response = await _supabase
+          .from('audio_posts')
+          .insert({
+            'audio_url': audioUrl,
+            'latitude': lat,
+            'longitude': lng,
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+
+      return response;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> deleteAudio(String fileName) async {
+    try {
+      await _supabase.storage.from('audio_posts').remove([fileName]);
+    } catch (_) {}
+  }
+
+  Future<List<AudioPost>> getNearbyPosts({
+    required double latitude,
+    required double longitude,
+    required double radius,
+  }) async {
+    try {
+      final response = await _supabase.rpc(
+        'get_nearby_audio_posts',
+        params: {
+          'user_lat': latitude,
+          'user_lng': longitude,
+          'radius_km': radius,
+        },
+      );
+
+      return (response as List).map((item) => AudioPost.fromMap(item)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<AudioPost>> getFeed({DateTime? before, int limit = 20}) async {
+    try {
+      var query = _supabase
+          .from('audio_posts')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      if (before != null) {
+        query = query.lt('created_at', before.toIso8601String());
+      }
+
+      final response = await query;
+
+      return (response as List).map((item) => AudioPost.fromMap(item)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 }

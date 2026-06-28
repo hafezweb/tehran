@@ -1,34 +1,53 @@
 class AudioPost {
   final String id;
-  final String userId;
   final String audioUrl;
-  final double lat;
-  final double lng;
-  final int likes;
-  final int plays;
+  final double latitude;
+  final double longitude;
   final DateTime createdAt;
 
-  AudioPost({
+  const AudioPost({
     required this.id,
-    required this.userId,
     required this.audioUrl,
-    required this.lat,
-    required this.lng,
-    required this.likes,
-    required this.plays,
+    required this.latitude,
+    required this.longitude,
     required this.createdAt,
   });
 
-  factory AudioPost.fromJson(Map<String, dynamic> json) {
+  factory AudioPost.fromMap(Map<String, dynamic> map) {
     return AudioPost(
-      id: json['id'],
-      userId: json['user_id'],
-      audioUrl: json['audio_url'],
-      lat: (json['lat'] as num).toDouble(),
-      lng: (json['lng'] as num).toDouble(),
-      likes: json['likes'] ?? 0,
-      plays: json['plays'] ?? 0,
-      createdAt: DateTime.parse(json['created_at']),
+      id: map['id']?.toString() ?? '',
+      audioUrl: map['audio_url']?.toString() ?? '',
+      latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
+      createdAt:
+          DateTime.tryParse(map['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'audio_url': audioUrl,
+      'latitude': latitude,
+      'longitude': longitude,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  AudioPost copyWith({
+    String? id,
+    String? audioUrl,
+    double? latitude,
+    double? longitude,
+    DateTime? createdAt,
+  }) {
+    return AudioPost(
+      id: id ?? this.id,
+      audioUrl: audioUrl ?? this.audioUrl,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
+
 import '../models/audio_post.dart';
 import '../services/supabase_service.dart';
 import '../services/location_service.dart';
 import '../services/audio_service.dart';
-import 'global_audio_player.dart';
+import '../services/global_audio_player.dart';
 
 class AudioRepository {
   final SupabaseService _supabaseService;
@@ -21,18 +22,61 @@ class AudioRepository {
        _audioService = audioService ?? AudioService();
 
   Future<bool> startRecording() => _audioService.startRecording();
+
   Future<String?> stopRecording() => _audioService.stopRecording();
+
   Future<Position?> getCurrentLocation() => _locationService.getCurrent();
 
   Future<String?> createAudioPost() async {
-    /* همان کد قبلی */
-    // (کپی از پیام‌های قبل)
+    try {
+      final audioPath = await stopRecording();
+      if (audioPath == null) return null;
+
+      final position = await getCurrentLocation();
+      if (position == null) return null;
+
+      final file = File(audioPath);
+
+      final uploadedUrl = await _supabaseService.uploadAudio(file);
+      if (uploadedUrl == null) return null;
+
+      final postId = await _supabaseService.createAudioPost(
+        audioUrl: uploadedUrl,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+
+      return postId;
+    } catch (e) {
+      print("Create Audio Post Error: $e");
+      return null;
+    }
   }
 
   Stream<List<AudioPost>> watchAllPosts() {
     return _supabaseService.streamAudioPosts().map(
       (data) => data.map((e) => AudioPost.fromJson(e)).toList(),
     );
+  }
+
+  Future<List<AudioPost>> getFeed() async {
+    try {
+      final data = await _supabaseService.getFeed();
+      return data.map((e) => AudioPost.fromJson(e)).toList();
+    } catch (e) {
+      print("Feed Error: $e");
+      return [];
+    }
+  }
+
+  Future<List<AudioPost>> getMyPosts() async {
+    try {
+      final data = await _supabaseService.getMyPosts();
+      return data.map((e) => AudioPost.fromJson(e)).toList();
+    } catch (e) {
+      print("My Posts Error: $e");
+      return [];
+    }
   }
 
   Future<List<AudioPost>> getPostsInBounds({
@@ -48,6 +92,7 @@ class AudioRepository {
         east: east,
         west: west,
       );
+
       return data.map((e) => AudioPost.fromJson(e)).toList();
     } catch (e) {
       print("Bounds Error: $e");
@@ -66,5 +111,7 @@ class AudioRepository {
     await player.stop();
   }
 
-  Future<void> toggleLike(String postId) => _supabaseService.toggleLike(postId);
+  Future<void> toggleLike(String postId) {
+    return _supabaseService.toggleLike(postId);
+  }
 }

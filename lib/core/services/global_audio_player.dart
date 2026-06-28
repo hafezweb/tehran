@@ -1,31 +1,50 @@
-import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
 
-class GlobalAudioPlayer extends GetxController {
-  static GlobalAudioPlayer get instance => Get.find<GlobalAudioPlayer>();
+class GlobalAudioPlayer {
+  static final GlobalAudioPlayer _instance = GlobalAudioPlayer._internal();
+
+  factory GlobalAudioPlayer() => _instance;
+
+  GlobalAudioPlayer._internal();
 
   final AudioPlayer _player = AudioPlayer();
-  final currentUrl = ''.obs;
-  final isPlaying = false.obs;
-  String? currentPostId;
 
-  Future<void> play(String url, String postId) async {
-    try {
-      await stop();
-      currentUrl.value = url;
-      currentPostId = postId;
-      isPlaying.value = true;
+  String? _currentUrl;
+
+  AudioPlayer get player => _player;
+
+  String? get currentUrl => _currentUrl;
+
+  bool get isPlaying => _player.playing;
+
+  Stream<Duration> get positionStream => _player.positionStream;
+
+  Stream<PlayerState> get playerStateStream => _player.playerStateStream;
+
+  Duration? get duration => _player.duration;
+
+  Future<void> play(String url) async {
+    if (_currentUrl != url) {
+      await _player.stop();
       await _player.setUrl(url);
-      await _player.play();
-    } catch (e) {
-      print("Player Error: $e");
+      _currentUrl = url;
+    }
+
+    await _player.play();
+  }
+
+  Future<void> pause() async {
+    if (_player.playing) {
+      await _player.pause();
     }
   }
 
   Future<void> stop() async {
     await _player.stop();
-    currentUrl.value = '';
-    currentPostId = null;
-    isPlaying.value = false;
+    _currentUrl = null;
+  }
+
+  Future<void> seek(Duration position) async {
+    await _player.seek(position);
   }
 }

@@ -32,4 +32,71 @@ class MapControllerX extends GetxController {
   @override
   void onClose() {
     _feedSubscription?.cancel();
-    audioService
+    audioService.dispose();
+    super.onClose();
+  }
+
+  Future<void> loadInitialFeed() async {
+    isLoading.value = true;
+    try {
+      final res = await repository._supabaseService.getFeed();
+      audioPosts.assignAll(res.map((e) => AudioPost.fromJson(e)).toList());
+    } catch (e) {
+      print("Load Feed Error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> updateBounds(LatLngBounds bounds) async {
+    currentBounds = bounds;
+  }
+
+  Future<void> goToUserLocation() async {
+    try {
+      final pos = await locationService.getCurrent();
+      if (pos == null) return;
+      mapController.move(LatLng(pos.latitude, pos.longitude), 15);
+    } catch (e) {
+      print("Location Error: $e");
+    }
+  }
+
+  Future<void> startAudioRecording() async {
+    final started = await repository.startRecording();
+    if (started) {
+      isRecordingAudio.value = true;
+    }
+  }
+
+  Future<void> stopAudioRecording() async {
+    isRecordingAudio.value = false;
+    isLoading.value = true;
+    try {
+      final postId = await repository.createAudioPost();
+      if (postId != null) {
+        await loadInitialFeed();
+      }
+    } catch (e) {
+      print("Stop Recording Error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> playAudio(String url, String postId) async {
+    await repository.playAudio(url, postId);
+  }
+
+  Future<void> stopAudio() async {
+    await repository.stopAudio();
+  }
+
+  void listenToFeed() {
+    _feedSubscription = repository.watchAllPosts().listen((posts) {
+      audioPosts.assignAll(posts);
+    });
+  }
+
+  void updateZoom(double zoom) {}
+}

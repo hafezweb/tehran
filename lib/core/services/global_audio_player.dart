@@ -15,8 +15,7 @@ class GlobalAudioPlayer extends GetxController {
         await stop();
         return;
       }
-
-      await stop(); // Stop any previous playback
+      await stop();
 
       currentUrl.value = url;
       currentPostId = postId;
@@ -25,7 +24,6 @@ class GlobalAudioPlayer extends GetxController {
       await _player.setUrl(url);
       await _player.play();
 
-      // Auto stop listener
       _player.playerStateStream.listen((state) {
         if (state.processingState == ProcessingState.completed) {
           stop();

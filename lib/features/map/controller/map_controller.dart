@@ -5,7 +5,6 @@ import '../../../core/repositories/audio_repository.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/audio_service.dart';
 import '../../../core/models/audio_post.dart';
-import 'dart:async';
 
 class MapControllerX extends GetxController {
   final AudioRepository repository = Get.find<AudioRepository>();
@@ -19,39 +18,30 @@ class MapControllerX extends GetxController {
   final isRecordingAudio = false.obs;
   final audioPosts = <AudioPost>[].obs;
 
-  StreamSubscription? _feedSubscription;
-  LatLngBounds? currentBounds;
-
   @override
   void onInit() {
     super.onInit();
-    listenToFeed();
-    loadInitialFeed();
+    loadFeed();
   }
 
   @override
   void onClose() {
-    _feedSubscription?.cancel();
     audioService.dispose();
     super.onClose();
   }
 
-  Future<void> loadInitialFeed() async {
+  /// چون نقشه فعلاً realtime نیست (SupabaseService stream ندارد)،
+  /// این متد بعد از هر ضبط جدید و در ابتدای باز شدن صفحه صدا زده می‌شود.
+  Future<void> loadFeed() async {
     isLoading.value = true;
     try {
-      // قبلاً: repository._supabaseService.getFeed() -> ارور کامپایل
-      // الان: از طریق getter عمومی repository.supabaseService
-      final res = await repository.supabaseService.getFeed();
-      audioPosts.assignAll(res.map((e) => AudioPost.fromJson(e)).toList());
+      final res = await repository.getFeed();
+      audioPosts.assignAll(res);
     } catch (e) {
       print("Load Feed Error: $e");
     } finally {
       isLoading.value = false;
     }
-  }
-
-  Future<void> updateBounds(LatLngBounds bounds) async {
-    currentBounds = bounds;
   }
 
   Future<void> goToUserLocation() async {
@@ -77,7 +67,7 @@ class MapControllerX extends GetxController {
     try {
       final postId = await repository.createAudioPost();
       if (postId != null) {
-        await loadInitialFeed();
+        await loadFeed();
       }
     } catch (e) {
       print("Stop Recording Error: $e");
@@ -86,19 +76,11 @@ class MapControllerX extends GetxController {
     }
   }
 
-  Future<void> playAudio(String url, String postId) async {
-    await repository.playAudio(url, postId);
+  Future<void> playAudio(String url) async {
+    await repository.playAudio(url);
   }
 
   Future<void> stopAudio() async {
     await repository.stopAudio();
   }
-
-  void listenToFeed() {
-    _feedSubscription = repository.watchAllPosts().listen((posts) {
-      audioPosts.assignAll(posts);
-    });
-  }
-
-  void updateZoom(double zoom) {}
 }

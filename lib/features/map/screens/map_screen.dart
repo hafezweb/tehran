@@ -23,14 +23,6 @@ class MapScreen extends StatelessWidget {
               options: MapOptions(
                 initialCenter: controller.tehranCenter,
                 initialZoom: 11,
-                onPositionChanged: (position, hasGesture) {
-                  if (position.zoom != null) {
-                    controller.updateZoom(position.zoom!);
-                  }
-                  if (position.bounds != null) {
-                    controller.updateBounds(position.bounds!);
-                  }
-                },
               ),
               children: [
                 TileLayer(
@@ -46,22 +38,20 @@ class MapScreen extends StatelessWidget {
                     zoomToBoundsOnClick: true,
                     spiderfyCluster: true,
                     markers: controller.audioPosts.map((post) {
+                      // قبلاً: post.lat, post.lng -> این فیلدها وجود ندارند
+                      // الان: post.latitude, post.longitude (طبق AudioPost واقعی)
                       return Marker(
-                        point: LatLng(post.lat, post.lng),
+                        point: LatLng(post.latitude, post.longitude),
                         width: 50,
                         height: 50,
                         child: GestureDetector(
                           onTap: () {
                             showModalBottomSheet(
                               context: context,
-                              builder: (_) => AudioPlayerSheet(
-                                post: post,
-                                onPlay: () => controller.playAudio(
-                                  post.audioUrl,
-                                  post.id,
-                                ),
-                                onStop: () => controller.stopAudio(),
-                              ),
+                              // قبلاً: AudioPlayerSheet(post: post, onPlay: ..., onStop: ...)
+                              // الان: AudioPlayerSheet فقط post می‌گیرد؛ پخش را خودش
+                              // از طریق GlobalAudioPlayer مدیریت می‌کند.
+                              builder: (_) => AudioPlayerSheet(post: post),
                             );
                           },
                           child: const Icon(

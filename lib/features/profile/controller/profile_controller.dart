@@ -17,17 +17,12 @@ class ProfileController extends GetxController {
   Future<void> loadMyPosts() async {
     try {
       isLoading.value = true;
-      // قبلاً: repository._supabaseService -> ارور کامپایل (library-private)
-      final uid = repository.supabaseService.userId;
-      if (uid == null) return;
-
-      final res = await repository.supabaseService.client
-          .from('audio_posts')
-          .select()
-          .eq('user_id', uid)
-          .order('created_at', ascending: false);
-
-      myPosts.value = res.map((e) => AudioPost.fromJson(e)).toList();
+      // قبلاً: repository._supabaseService.client.from(...) -> ارور کامپایل
+      // (دسترسی به فیلد library-private از فایل دیگر) و client/userId هم
+      // در SupabaseService واقعی وجود نداشت.
+      // الان: از طریق متد عمومی repository.getMyPosts()
+      final res = await repository.getMyPosts();
+      myPosts.assignAll(res);
     } catch (e) {
       print("Profile Load Error: $e");
     } finally {

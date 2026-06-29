@@ -30,7 +30,7 @@ class AudioRepository {
 
   /// ضبط را متوقف می‌کند، فایل را به Supabase Storage آپلود می‌کند،
   /// موقعیت فعلی را می‌گیرد و یک ردیف جدید در audio_posts ثبت می‌کند.
-  /// خروجی: شناسه‌ی پست تازه‌ساخته‌شده، یا null اگر مرحله‌ای fail شود.
+  /// خروجی: id پست تازه‌ساخته‌شده، یا null اگر مرحله‌ای fail شود.
   Future<String?> createAudioPost() async {
     // ۱. توقف ضبط و گرفتن مسیر فایل لوکال
     final filePath = await stopRecording();
@@ -52,70 +52,52 @@ class AudioRepository {
       return null;
     }
 
-    // ۳. اطمینان از وجود یک کاربر (Anonymous Auth).
-    // قضیه‌ی OTP/Kavenegar فعلاً کنار گذاشته شده؛ اینجا فقط چک می‌کنیم
-    // که main.dart قبلاً signInAnonymously زده باشد.
-    final userId = _supabaseService.userId;
-    if (userId == null) {
-      print("createAudioPost: کاربر لاگین نیست (نه anonymous، نه واقعی).");
+    // ۳. آپلود فایل صوتی به باکت 'audio_posts' در Supabase Storage
+    final fileName = 'audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    final audioUrl = await _supabaseService.uploadAudio(file, fileName);
+    if (audioUrl == null) {
+      print("createAudioPost: آپلود فایل صوتی fail شد.");
       return null;
     }
 
-    try {
-      // ۴. آپلود فایل صوتی به Supabase Storage
-      final fileName =
-          'audio_${userId}_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      final audioUrl = await _supabaseService.uploadAudio(fileName, file);
-
-      // ۵. ثبت ردیف جدید در جدول audio_posts
-      final postId = await _supabaseService.insertAudioPost(
-        userId: userId,
-        audioUrl: audioUrl,
-        lat: position.latitude,
-        lng: position.longitude,
-      );
-
-      return postId;
-    } catch (e) {
-      print("createAudioPost Error: $e");
-      return null;
-    }
-  }
-
-  Stream<List<AudioPost>> watchAllPosts() {
-    return _supabaseService.streamAudioPosts().map(
-      (data) => data.map((e) => AudioPost.fromJson(e)).toList(),
+    // ۴. ثبت ردیف جدید در audio_posts.
+    // SupabaseService.createAudioPost خودش user_id را از کاربر فعلی
+    // (anonymous یا واقعی) می‌خواند؛ اگر کاربری نباشد null برمی‌گرداند.
+    final result = await _supabaseService.createAudioPost(
+      audioUrl: audioUrl,
+      lat: position.latitude,
+      lng: position.longitude,
     );
-  }
 
-  Future<List<AudioPost>> getPostsInBounds({
-    required double north,
-    required double south,
-    required double east,
-    required double west,
-  }) async {
-    try {
-      final data = await _supabaseService.getPostsInBounds(
-        north: north,
-        south: south,
-        east: east,
-        west: west,
-      );
-      return data.map((e) => AudioPost.fromJson(e)).toList();
-    } catch (e) {
-      print("Bounds Error: $e");
-      return [];
+    if (result == null) {
+      print("createAudioPost: ثبت ردیف در دیتابیس fail شد.");
+      return null;
     }
+
+    return result['id']?.toString();
   }
 
-  Future<void> playAudio(String url, String postId) async {
-    final player = Get.find<GlobalAudioPlayer>();
-    await player.play(url, postId);
-    await _supabaseService.incrementPlay(postId);
+  /// فید پست‌ها برای نقشه و صفحه‌ی فید. چون تابع RPC مربوط به
+  /// getNearbyPosts هنوز روی Supabase ساخته نشده، فعلاً از getFeed
+  /// (آخرین پست‌ها، بدون فیلتر جغرافیایی) استفاده می‌شود.
+  Future<List<AudioPost>> getFeed({DateTime? before, int limit = 20}) {
+    return _supabaseService.getFeed(before: before, limit: limit);
+  }
+
+  Future<List<AudioPost>> getMyPosts() {
+    return _supabaseService.getMyPosts();
+  }
+
+  // توجه: GlobalAudioPlayer یک GetxController نیست (singleton معمولی
+  // است)، پس با GlobalAudioPlayer() مستقیم به همان instance می‌رسیم،
+  // نه با Get.find.
+  Future<void> playAudio(String url) async {
+    final player = GlobalAudioPlayer();
+    await player.play(url);
   }
 
   Future<void> stopAudio() async {
-    final player = Get.find<GlobalAudioPlayer>();
+    final player = GlobalAudioPlayer();
     await player.stop();
   }
 

@@ -6,6 +6,7 @@ import 'app/app_shell.dart';
 import 'features/map/controller/map_controller.dart';
 import 'core/repositories/audio_repository.dart';
 import 'core/services/global_audio_player.dart';
+import 'core/services/supabase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,27 +17,15 @@ void main() async {
   );
 
   // قضیه‌ی OTP/Kavenegar فعلاً کنار گذاشته شده (تصمیم فعلی پروژه).
-  // برای اینکه user_id همیشه یک مقدار واقعی و معتبر در auth.users باشد
-  // (نه placeholder ساختگی که با foreign key تصادم می‌کند)،
-  // در صورت نبود session، یک ورود anonymous انجام می‌شود.
-  // پیش‌نیاز: "Allow anonymous sign-ins" باید در پنل Supabase فعال باشد.
-  final client = Supabase.instance.client;
-  if (client.auth.currentSession == null) {
-    try {
-      await client.auth.signInAnonymously();
-      print(
-        "Anonymous sign-in موفق بود. user_id: ${client.auth.currentUser?.id}",
-      );
-    } catch (e) {
-      print("Anonymous sign-in ناموفق بود: $e");
-      // اپ همچنان بالا می‌آید، ولی createAudioPost بعداً به دلیل نبود
-      // userId با خطا fail می‌شود تا داده‌ی orphan ساخته نشود.
-    }
-  }
+  // برای اینکه user_id همیشه یک مقدار واقعی و معتبر در auth.users باشد،
+  // در صورت نبود session یک ورود anonymous انجام می‌شود.
+  await SupabaseService().signInAnonymouslyIfNeeded();
 
   Get.put(AudioRepository());
-  Get.put(GlobalAudioPlayer());
   Get.put(MapControllerX());
+  // توجه: GlobalAudioPlayer دیگر GetxController نیست (singleton معمولی
+  // است)، پس دیگر نیازی به Get.put برایش نیست؛ با GlobalAudioPlayer()
+  // در هر فایل به همان instance دسترسی پیدا می‌کنید.
 
   runApp(const MyApp());
 }

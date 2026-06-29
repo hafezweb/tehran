@@ -47,9 +47,18 @@ class SupabaseService {
     required double lat,
     required double lng,
   }) async {
-    final uid = userId;
+    var uid = userId;
+
     if (uid == null) {
-      print("createAudioPost: کاربر لاگین نیست (نه anonymous، نه واقعی).");
+      print("No user found. Signing in anonymously...");
+
+      final authResponse = await _supabase.auth.signInAnonymously();
+
+      uid = authResponse.user?.id;
+    }
+
+    if (uid == null) {
+      print("Anonymous sign-in failed.");
       return null;
     }
 

@@ -6,6 +6,7 @@ import '../services/supabase_service.dart';
 import '../services/location_service.dart';
 import '../services/audio_service.dart';
 import '../services/global_audio_player.dart';
+import '../utils/snackbar_helper.dart';
 
 class AudioRepository {
   final SupabaseService _supabaseService;
@@ -31,17 +32,21 @@ class AudioRepository {
   /// ضبط را متوقف می‌کند، فایل را به Supabase Storage آپلود می‌کند،
   /// موقعیت فعلی را می‌گیرد و یک ردیف جدید در audio_posts ثبت می‌کند.
   /// خروجی: id پست تازه‌ساخته‌شده، یا null اگر مرحله‌ای fail شود.
+  /// هر مرحله‌ی fail‌شده، یک Snackbar قابل‌خواندن روی صفحه نشان می‌دهد
+  /// تا بدون logcat هم بتوان مشکل را تشخیص داد.
   Future<String?> createAudioPost() async {
     // ۱. توقف ضبط و گرفتن مسیر فایل لوکال
     final filePath = await stopRecording();
     if (filePath == null) {
       print("createAudioPost: مسیر فایل ضبط‌شده null است.");
+      SnackbarHelper.showError("ضبط صدا ناموفق بود (فایل ساخته نشد).");
       return null;
     }
 
     final file = File(filePath);
     if (!await file.exists()) {
       print("createAudioPost: فایل ضبط‌شده روی دیسک پیدا نشد: $filePath");
+      SnackbarHelper.showError("فایل صوتی روی دیسک پیدا نشد.");
       return null;
     }
 
@@ -49,6 +54,9 @@ class AudioRepository {
     final position = await getCurrentLocation();
     if (position == null) {
       print("createAudioPost: موقعیت مکانی در دسترس نیست.");
+      SnackbarHelper.showError(
+        "موقعیت مکانی در دسترس نیست. GPS گوشی را روشن کنید.",
+      );
       return null;
     }
 
@@ -57,6 +65,9 @@ class AudioRepository {
     final audioUrl = await _supabaseService.uploadAudio(file, fileName);
     if (audioUrl == null) {
       print("createAudioPost: آپلود فایل صوتی fail شد.");
+      SnackbarHelper.showError(
+        "آپلود فایل صوتی ناموفق بود (اتصال یا دسترسی Storage را چک کنید).",
+      );
       return null;
     }
 
@@ -71,9 +82,13 @@ class AudioRepository {
 
     if (result == null) {
       print("createAudioPost: ثبت ردیف در دیتابیس fail شد.");
+      SnackbarHelper.showError(
+        "ثبت پست در دیتابیس ناموفق بود (لاگین/دسترسی را چک کنید).",
+      );
       return null;
     }
 
+    SnackbarHelper.showSuccess("صدا با موفقیت ثبت شد.");
     return result['id']?.toString();
   }
 

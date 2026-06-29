@@ -102,19 +102,21 @@ class SupabaseService {
     }
   }
 
+  /// آخرین پست‌ها، صفحه‌بندی‌شده با before/limit.
+  /// نکته‌ی فنی مهم: در postgrest 2.7.2، فیلترها (lt/eq/...) باید قبل
+  /// از order()/limit() اعمال شوند، وگرنه کامپایل ارور می‌دهد (نوع
+  /// builder از PostgrestFilterBuilder به PostgrestTransformBuilder
+  /// تغییر می‌کند که دیگر متدهای فیلتر را ندارد).
   Future<List<AudioPost>> getFeed({DateTime? before, int limit = 20}) async {
     try {
-      var query = _supabase
-          .from('audio_posts')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(limit);
+      final filterBuilder = _supabase.from('audio_posts').select();
 
-      if (before != null) {
-        query = query.lt('created_at', before.toIso8601String());
-      }
-
-      final response = await query;
+      final response =
+          await (before != null
+                  ? filterBuilder.lt('created_at', before.toIso8601String())
+                  : filterBuilder)
+              .order('created_at', ascending: false)
+              .limit(limit);
 
       return (response as List).map((item) => AudioPost.fromMap(item)).toList();
     } catch (e) {

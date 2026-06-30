@@ -85,6 +85,14 @@ class AudioRepository {
     return _supabaseService.getRankedFeed();
   }
 
+  Stream<List<AudioPost>> watchFeed() {
+    return _supabaseService.watchFeed();
+  }
+
+  Future<List<AudioPost>> getMyPosts() {
+    return _supabaseService.getMyPosts();
+  }
+
   /*
   -------------------------
   AUDIO PLAYER

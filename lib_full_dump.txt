@@ -1,18 +1,26 @@
 FILES TREE:
 lib/main.dart
 lib/app/app_shell.dart
+lib/core/models/audio_comment.dart
 lib/core/models/audio_post.dart
+lib/core/models/audio_reply.dart
+lib/core/models/audio_report.dart
 lib/core/repositories/audio_repository.dart
 lib/core/services/audio_service.dart
 lib/core/services/global_audio_player.dart
 lib/core/services/location_service.dart
 lib/core/services/supabase_service.dart
+lib/core/theme/app_theme.dart
 lib/core/utils/debouncer.dart
 lib/core/utils/snackbar_helper.dart
 lib/features/feed/feed_screen.dart
+lib/features/feed/widgets/comment_sheet.dart
+lib/features/feed/widgets/voice_card.dart
 lib/features/map/controller/map_controller.dart
 lib/features/map/screens/map_screen.dart
 lib/features/map/widgets/audio_player_sheet.dart
+lib/features/map/widgets/voice_pin.dart
+lib/features/map/widgets/waveform_bar.dart
 lib/features/map/widgets/waveform_player.dart
 lib/features/profile/controller/profile_controller.dart
 lib/features/profile/screens/profile_screen.dart
@@ -117,58 +125,149 @@ class _AppShellState extends State<AppShell> {
 }
 
 
-######## FILE: lib/core/models/audio_post.dart ########
+######## FILE: lib/core/models/audio_comment.dart ########
 
-class AudioPost {
+class AudioComment {
   final String id;
-  final String audioUrl;
-  final double latitude;
-  final double longitude;
+  final String postId;
+  final String userId;
+  final String text;
   final DateTime createdAt;
 
-  const AudioPost({
+  const AudioComment({
     required this.id,
-    required this.audioUrl,
-    required this.latitude,
-    required this.longitude,
+    required this.postId,
+    required this.userId,
+    required this.text,
     required this.createdAt,
   });
 
-  factory AudioPost.fromMap(Map<String, dynamic> map) {
-    return AudioPost(
+  factory AudioComment.fromMap(Map<String, dynamic> map) {
+    return AudioComment(
       id: map['id']?.toString() ?? '',
-      audioUrl: map['audio_url']?.toString() ?? '',
-      latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
-      longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
+      postId: map['post_id']?.toString() ?? '',
+      userId: map['user_id']?.toString() ?? '',
+      text: map['text']?.toString() ?? '',
       createdAt:
           DateTime.tryParse(map['created_at']?.toString() ?? '') ??
           DateTime.now(),
     );
   }
+}
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'audio_url': audioUrl,
-      'latitude': latitude,
-      'longitude': longitude,
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
 
-  AudioPost copyWith({
-    String? id,
-    String? audioUrl,
-    double? latitude,
-    double? longitude,
-    DateTime? createdAt,
-  }) {
+######## FILE: lib/core/models/audio_post.dart ########
+
+class AudioPost {
+  final String id;
+  final String userId;
+  final String audioUrl;
+  final double latitude;
+  final double longitude;
+  final int duration;
+  final int likesCount;
+  final int commentsCount;
+  final bool isLiked;
+  final bool isSaved;
+  final bool isAnonymous;
+  final String city;
+  final double score;
+  final int trustScore;
+  final DateTime createdAt;
+
+  const AudioPost({
+    required this.id,
+    required this.userId,
+    required this.audioUrl,
+    required this.latitude,
+    required this.longitude,
+    required this.duration,
+    required this.likesCount,
+    required this.commentsCount,
+    required this.isLiked,
+    required this.isSaved,
+    required this.isAnonymous,
+    required this.city,
+    required this.score,
+    required this.trustScore,
+    required this.createdAt,
+  });
+
+  factory AudioPost.fromMap(Map<String, dynamic> map) {
     return AudioPost(
-      id: id ?? this.id,
-      audioUrl: audioUrl ?? this.audioUrl,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      createdAt: createdAt ?? this.createdAt,
+      id: map['id'] ?? '',
+      userId: map['user_id'] ?? '',
+      audioUrl: map['audio_url'] ?? '',
+      latitude: (map['latitude'] as num).toDouble(),
+      longitude: (map['longitude'] as num).toDouble(),
+      duration: map['duration'] ?? 0,
+      likesCount: map['likes_count'] ?? 0,
+      commentsCount: map['comments_count'] ?? 0,
+      isLiked: map['is_liked'] ?? false,
+      isSaved: map['is_saved'] ?? false,
+      isAnonymous: map['is_anonymous'] ?? true,
+      city: map['city'] ?? '',
+      score: (map['score'] as num?)?.toDouble() ?? 0,
+      trustScore: map['trust_score'] ?? 100,
+      createdAt: DateTime.parse(map['created_at']),
+    );
+  }
+}
+
+
+######## FILE: lib/core/models/audio_reply.dart ########
+
+class AudioReply {
+  final String id;
+  final String commentId;
+  final String userId;
+  final String text;
+  final DateTime createdAt;
+
+  const AudioReply({
+    required this.id,
+    required this.commentId,
+    required this.userId,
+    required this.text,
+    required this.createdAt,
+  });
+
+  factory AudioReply.fromMap(Map<String, dynamic> map) {
+    return AudioReply(
+      id: map['id'] ?? '',
+      commentId: map['comment_id'] ?? '',
+      userId: map['user_id'] ?? '',
+      text: map['text'] ?? '',
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+
+######## FILE: lib/core/models/audio_report.dart ########
+
+class AudioReport {
+  final String id;
+  final String postId;
+  final String userId;
+  final String reason;
+  final DateTime createdAt;
+
+  const AudioReport({
+    required this.id,
+    required this.postId,
+    required this.userId,
+    required this.reason,
+    required this.createdAt,
+  });
+
+  factory AudioReport.fromMap(Map<String, dynamic> map) {
+    return AudioReport(
+      id: map['id'] ?? '',
+      postId: map['post_id'] ?? '',
+      userId: map['user_id'] ?? '',
+      reason: map['reason'] ?? '',
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
     );
   }
 }
@@ -177,81 +276,68 @@ class AudioPost {
 ######## FILE: lib/core/repositories/audio_repository.dart ########
 
 import 'dart:io';
-import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
+
 import '../models/audio_post.dart';
-import '../services/supabase_service.dart';
-import '../services/location_service.dart';
+import '../models/audio_comment.dart';
+import '../models/audio_reply.dart';
 import '../services/audio_service.dart';
+import '../services/location_service.dart';
 import '../services/global_audio_player.dart';
-import '../utils/snackbar_helper.dart';
+import '../services/supabase_service.dart';
 
 class AudioRepository {
   final SupabaseService _supabaseService;
-  final LocationService _locationService;
   final AudioService _audioService;
+  final LocationService _locationService;
 
   AudioRepository({
     SupabaseService? supabaseService,
-    LocationService? locationService,
     AudioService? audioService,
+    LocationService? locationService,
   }) : _supabaseService = supabaseService ?? SupabaseService(),
-       _locationService = locationService ?? LocationService(),
-       _audioService = audioService ?? AudioService();
+       _audioService = audioService ?? AudioService(),
+       _locationService = locationService ?? LocationService();
 
-  // Getter عمومی - چون فایل‌های دیگر (map_controller.dart, profile_controller.dart)
-  // نمی‌توانند مستقیماً به _supabaseService (که library-private است) دسترسی داشته باشند.
-  SupabaseService get supabaseService => _supabaseService;
+  /*
+  -------------------------
+  RECORDING LAYER
+  -------------------------
+  */
 
-  Future<bool> startRecording() => _audioService.startRecording();
-  Future<String?> stopRecording() => _audioService.stopRecording();
-  Future<Position?> getCurrentLocation() => _locationService.getCurrent();
+  Future<bool> startRecording() async {
+    return _audioService.startRecording();
+  }
 
-  /// ضبط را متوقف می‌کند، فایل را به Supabase Storage آپلود می‌کند،
-  /// موقعیت فعلی را می‌گیرد و یک ردیف جدید در audio_posts ثبت می‌کند.
-  /// خروجی: id پست تازه‌ساخته‌شده، یا null اگر مرحله‌ای fail شود.
-  /// هر مرحله‌ی fail‌شده، یک Snackbar قابل‌خواندن روی صفحه نشان می‌دهد
-  /// تا بدون logcat هم بتوان مشکل را تشخیص داد.
+  Future<String?> stopRecording() async {
+    return _audioService.stopRecording();
+  }
+
+  Future<Position?> getCurrentLocation() async {
+    return _locationService.getCurrent();
+  }
+
   Future<String?> createAudioPost() async {
-    // ۱. توقف ضبط و گرفتن مسیر فایل لوکال
-    final filePath = await stopRecording();
-    if (filePath == null) {
-      print("createAudioPost: مسیر فایل ضبط‌شده null است.");
-      SnackbarHelper.showError("ضبط صدا ناموفق بود (فایل ساخته نشد).");
-      return null;
+    final allowed = await _supabaseService.canUpload();
+    if (!allowed) {
+      throw Exception('Upload rate limit reached');
     }
+
+    final filePath = await stopRecording();
+    if (filePath == null) return null;
 
     final file = File(filePath);
-    if (!await file.exists()) {
-      print("createAudioPost: فایل ضبط‌شده روی دیسک پیدا نشد: $filePath");
-      SnackbarHelper.showError("فایل صوتی روی دیسک پیدا نشد.");
-      return null;
-    }
+    if (!await file.exists()) return null;
 
-    // ۲. گرفتن موقعیت فعلی کاربر
     final position = await getCurrentLocation();
-    if (position == null) {
-      print("createAudioPost: موقعیت مکانی در دسترس نیست.");
-      SnackbarHelper.showError(
-        "موقعیت مکانی در دسترس نیست. GPS گوشی را روشن کنید.",
-      );
-      return null;
-    }
+    if (position == null) return null;
 
-    // ۳. آپلود فایل صوتی به باکت 'audio_posts' در Supabase Storage
     final fileName = 'audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    final audioUrl = await _supabaseService.uploadAudio(file, fileName);
-    if (audioUrl == null) {
-      print("createAudioPost: آپلود فایل صوتی fail شد.");
-      SnackbarHelper.showError(
-        "آپلود فایل صوتی ناموفق بود (اتصال یا دسترسی Storage را چک کنید).",
-      );
-      return null;
-    }
 
-    // ۴. ثبت ردیف جدید در audio_posts.
-    // SupabaseService.createAudioPost خودش user_id را از کاربر فعلی
-    // (anonymous یا واقعی) می‌خواند؛ اگر کاربری نباشد null برمی‌گرداند.
+    final audioUrl = await _supabaseService.uploadAudio(file, fileName);
+
+    if (audioUrl == null) return null;
+
     final result = await _supabaseService.createAudioPost(
       audioUrl: audioUrl,
       lat: position.latitude,
@@ -259,31 +345,29 @@ class AudioRepository {
     );
 
     if (result == null) {
-      print("createAudioPost: ثبت ردیف در دیتابیس fail شد.");
-      SnackbarHelper.showError(
-        "ثبت پست در دیتابیس ناموفق بود (لاگین/دسترسی را چک کنید).",
-      );
+      await _supabaseService.deleteAudio(fileName);
       return null;
     }
 
-    SnackbarHelper.showSuccess("صدا با موفقیت ثبت شد.");
     return result['id']?.toString();
   }
 
-  /// فید پست‌ها برای نقشه و صفحه‌ی فید. چون تابع RPC مربوط به
-  /// getNearbyPosts هنوز روی Supabase ساخته نشده، فعلاً از getFeed
-  /// (آخرین پست‌ها، بدون فیلتر جغرافیایی) استفاده می‌شود.
-  Future<List<AudioPost>> getFeed({DateTime? before, int limit = 20}) {
-    return _supabaseService.getFeed(before: before, limit: limit);
+  /*
+  -------------------------
+  FEED
+  -------------------------
+  */
+
+  Future<List<AudioPost>> getFeed() {
+    return _supabaseService.getRankedFeed();
   }
 
-  Future<List<AudioPost>> getMyPosts() {
-    return _supabaseService.getMyPosts();
-  }
+  /*
+  -------------------------
+  AUDIO PLAYER
+  -------------------------
+  */
 
-  // توجه: GlobalAudioPlayer یک GetxController نیست (singleton معمولی
-  // است)، پس با GlobalAudioPlayer() مستقیم به همان instance می‌رسیم،
-  // نه با Get.find.
   Future<void> playAudio(String url) async {
     final player = GlobalAudioPlayer();
     await player.play(url);
@@ -294,12 +378,59 @@ class AudioRepository {
     await player.stop();
   }
 
-  Future<void> toggleLike(String postId) => _supabaseService.toggleLike(postId);
+  /*
+  -------------------------
+  SOCIAL
+  -------------------------
+  */
+
+  Future<void> toggleLike(String postId) {
+    return _supabaseService.toggleLike(postId);
+  }
+
+  Future<void> toggleSave(String postId) {
+    return _supabaseService.toggleSave(postId);
+  }
+
+  Future<List<AudioComment>> fetchComments(String postId) {
+    return _supabaseService.getComments(postId);
+  }
+
+  Future<void> createComment({required String postId, required String text}) {
+    return _supabaseService.addComment(postId: postId, text: text);
+  }
+
+  Future<List<AudioReply>> fetchReplies(String commentId) {
+    return _supabaseService.getReplies(commentId);
+  }
+
+  Future<void> createReply({required String commentId, required String text}) {
+    return _supabaseService.addReply(commentId: commentId, text: text);
+  }
+
+  /*
+  -------------------------
+  TRUST
+  -------------------------
+  */
+
+  Future<void> reportAudio({required String postId, required String reason}) {
+    return _supabaseService.reportAudio(postId: postId, reason: reason);
+  }
+
+  Future<void> blockUser(String userId) {
+    return _supabaseService.blockUser(userId);
+  }
+
+  Future<bool> canUpload() {
+    return _supabaseService.canUpload();
+  }
 }
 
 
 ######## FILE: lib/core/services/audio_service.dart ########
 
+import 'dart:async';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -307,8 +438,9 @@ class AudioService {
   final AudioRecorder _recorder = AudioRecorder();
 
   String? _recordPath;
-
   bool isRecording = false;
+
+  Timer? _timer;
 
   Future<bool> startRecording() async {
     final hasPermission = await _recorder.hasPermission();
@@ -325,19 +457,28 @@ class AudioService {
     );
 
     isRecording = true;
+
+    _timer?.cancel();
+    _timer = Timer(const Duration(seconds: 90), () async {
+      if (isRecording) {
+        await stopRecording();
+      }
+    });
+
     return true;
   }
 
   Future<String?> stopRecording() async {
-    final path = await _recorder.stop();
+    _timer?.cancel();
 
-    print("RECORDED FILE PATH: $path");
+    final path = await _recorder.stop();
 
     isRecording = false;
     return path;
   }
 
   void dispose() {
+    _timer?.cancel();
     _recorder.dispose();
   }
 }
@@ -430,189 +571,222 @@ class LocationService {
 ######## FILE: lib/core/services/supabase_service.dart ########
 
 import 'dart:io';
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/audio_post.dart';
+import '../models/audio_comment.dart';
+import '../models/audio_reply.dart';
 
 class SupabaseService {
-  final SupabaseClient _supabase = Supabase.instance.client;
-
-  // قضیه‌ی OTP/Kavenegar فعلاً کنار گذاشته شده (تصمیم فعلی پروژه).
-  // برای اینکه createAudioPost بتواند user_id را پر کند، از Anonymous
-  // Auth استفاده می‌شود. این متد در main.dart صدا زده می‌شود.
-  // پیش‌نیاز: "Allow anonymous sign-ins" باید در پنل Supabase فعال باشد.
-  Future<void> signInAnonymouslyIfNeeded() async {
-    if (_supabase.auth.currentSession == null) {
-      try {
-        await _supabase.auth.signInAnonymously();
-        print("Anonymous sign-in موفق بود. user_id: $userId");
-      } catch (e) {
-        print("Anonymous sign-in ناموفق بود: $e");
-      }
-    }
-  }
+  final _supabase = Supabase.instance.client;
 
   String? get userId => _supabase.auth.currentUser?.id;
 
+  /*
+  -------------------------
+  AUTH
+  -------------------------
+  */
+
+  Future<void> signInAnonymouslyIfNeeded() async {
+    if (_supabase.auth.currentSession == null) {
+      await _supabase.auth.signInAnonymously();
+    }
+  }
+
+  /*
+  -------------------------
+  STORAGE
+  -------------------------
+  */
+
   Future<String?> uploadAudio(File file, String fileName) async {
     try {
-      if (!file.existsSync()) {
-        return null;
-      }
+      await signInAnonymouslyIfNeeded();
 
       await _supabase.storage.from('audio_posts').upload(fileName, file);
 
       return _supabase.storage.from('audio_posts').getPublicUrl(fileName);
-    } catch (e) {
-      print("uploadAudio Error: $e");
+    } catch (_) {
       return null;
     }
   }
 
-  /// ثبت پست جدید. user_id به‌صورت خودکار از کاربر فعلی (anonymous یا
-  /// واقعی) خوانده می‌شود؛ اگر کاربری لاگین نباشد null برمی‌گرداند تا
-  /// داده‌ی orphan ساخته نشود.
+  Future<void> deleteAudio(String fileName) async {
+    await _supabase.storage.from('audio_posts').remove([fileName]);
+  }
+
+  /*
+  -------------------------
+  POSTS
+  -------------------------
+  */
+
   Future<Map<String, dynamic>?> createAudioPost({
     required String audioUrl,
     required double lat,
     required double lng,
   }) async {
-    var uid = userId;
-
-    if (uid == null) {
-      print("No user found. Signing in anonymously...");
-
-      final authResponse = await _supabase.auth.signInAnonymously();
-
-      uid = authResponse.user?.id;
-    }
-
-    if (uid == null) {
-      print("Anonymous sign-in failed.");
-      return null;
-    }
+    await signInAnonymouslyIfNeeded();
 
     try {
       final response = await _supabase
           .from('audio_posts')
           .insert({
-            'user_id': uid,
+            'user_id': userId,
             'audio_url': audioUrl,
             'latitude': lat,
             'longitude': lng,
+            'duration': 90,
+            'likes_count': 0,
+            'comments_count': 0,
+            'is_liked': false,
+            'is_saved': false,
+            'is_anonymous': true,
+            'city': 'Tehran',
+            'score': 0,
+            'trust_score': 100,
             'created_at': DateTime.now().toIso8601String(),
           })
           .select()
           .single();
 
       return response;
-    } catch (e) {
-      print("createAudioPost Error: $e");
+    } catch (_) {
       return null;
     }
   }
 
-  Future<void> deleteAudio(String fileName) async {
-    try {
-      await _supabase.storage.from('audio_posts').remove([fileName]);
-    } catch (_) {}
+  Future<List<AudioPost>> getRankedFeed() async {
+    final response = await _supabase
+        .from('audio_posts')
+        .select()
+        .gte('trust_score', 50)
+        .order('score', ascending: false);
+
+    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
   }
 
-  // فعلاً استفاده نمی‌شود چون تابع SQL مربوطه روی Supabase ساخته نشده.
-  // برای نمایش پین‌های نقشه به‌جایش از getFeed() استفاده می‌شود.
-  Future<List<AudioPost>> getNearbyPosts({
-    required double latitude,
-    required double longitude,
-    required double radius,
-  }) async {
-    try {
-      final response = await _supabase.rpc(
-        'get_nearby_audio_posts',
-        params: {
-          'user_lat': latitude,
-          'user_lng': longitude,
-          'radius_km': radius,
-        },
-      );
+  /*
+  -------------------------
+  RATE LIMIT
+  -------------------------
+  */
 
-      return (response as List).map((item) => AudioPost.fromMap(item)).toList();
-    } catch (_) {
-      return [];
-    }
+  Future<bool> canUpload() async {
+    await signInAnonymouslyIfNeeded();
+
+    final response = await _supabase
+        .from('audio_posts')
+        .select()
+        .eq('user_id', userId!)
+        .gte(
+          'created_at',
+          DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
+        );
+
+    return (response as List).length < 3;
   }
 
-  /// آخرین پست‌ها، صفحه‌بندی‌شده با before/limit.
-  /// نکته‌ی فنی مهم: در postgrest 2.7.2، فیلترها (lt/eq/...) باید قبل
-  /// از order()/limit() اعمال شوند، وگرنه کامپایل ارور می‌دهد (نوع
-  /// builder از PostgrestFilterBuilder به PostgrestTransformBuilder
-  /// تغییر می‌کند که دیگر متدهای فیلتر را ندارد).
-  Future<List<AudioPost>> getFeed({DateTime? before, int limit = 20}) async {
-    try {
-      final filterBuilder = _supabase.from('audio_posts').select();
+  /*
+  -------------------------
+  SOCIAL
+  -------------------------
+  */
 
-      final response =
-          await (before != null
-                  ? filterBuilder.lt('created_at', before.toIso8601String())
-                  : filterBuilder)
-              .order('created_at', ascending: false)
-              .limit(limit);
-
-      return (response as List).map((item) => AudioPost.fromMap(item)).toList();
-    } catch (e) {
-      print("getFeed Error: $e");
-      return [];
-    }
-  }
-
-  /// پست‌های متعلق به کاربر فعلی (برای صفحه‌ی پروفایل).
-  Future<List<AudioPost>> getMyPosts() async {
-    final uid = userId;
-    if (uid == null) return [];
-
-    try {
-      final response = await _supabase
-          .from('audio_posts')
-          .select()
-          .eq('user_id', uid)
-          .order('created_at', ascending: false);
-
-      return (response as List).map((item) => AudioPost.fromMap(item)).toList();
-    } catch (e) {
-      print("getMyPosts Error: $e");
-      return [];
-    }
-  }
-
-  /// لایک/آن‌لایک یک پست برای کاربر فعلی. جدول audio_likes با ستون‌های
-  /// user_id و post_id.
   Future<void> toggleLike(String postId) async {
-    final uid = userId;
-    if (uid == null) return;
-
-    try {
-      final exists = await _supabase
-          .from('audio_likes')
-          .select('id')
-          .eq('user_id', uid)
-          .eq('post_id', postId);
-
-      if ((exists as List).isEmpty) {
-        await _supabase.from('audio_likes').insert({
-          'user_id': uid,
-          'post_id': postId,
-        });
-      } else {
-        await _supabase
-            .from('audio_likes')
-            .delete()
-            .eq('user_id', uid)
-            .eq('post_id', postId);
-      }
-    } catch (e) {
-      print("toggleLike Error: $e");
-    }
+    await _supabase.rpc('toggle_audio_like', params: {'p_post_id': postId});
   }
+
+  Future<void> toggleSave(String postId) async {
+    await _supabase.rpc('toggle_audio_save', params: {'p_post_id': postId});
+  }
+
+  Future<List<AudioComment>> getComments(String postId) async {
+    final response = await _supabase
+        .from('audio_comments')
+        .select()
+        .eq('post_id', postId)
+        .order('created_at');
+
+    return (response as List).map((e) => AudioComment.fromMap(e)).toList();
+  }
+
+  Future<void> addComment({
+    required String postId,
+    required String text,
+  }) async {
+    await _supabase.from('audio_comments').insert({
+      'post_id': postId,
+      'user_id': userId,
+      'text': text,
+    });
+  }
+
+  Future<List<AudioReply>> getReplies(String commentId) async {
+    final response = await _supabase
+        .from('audio_replies')
+        .select()
+        .eq('comment_id', commentId)
+        .order('created_at');
+
+    return (response as List).map((e) => AudioReply.fromMap(e)).toList();
+  }
+
+  Future<void> addReply({
+    required String commentId,
+    required String text,
+  }) async {
+    await _supabase.from('audio_replies').insert({
+      'comment_id': commentId,
+      'user_id': userId,
+      'text': text,
+    });
+  }
+
+  /*
+  -------------------------
+  TRUST
+  -------------------------
+  */
+
+  Future<void> reportAudio({
+    required String postId,
+    required String reason,
+  }) async {
+    await _supabase.from('audio_reports').insert({
+      'post_id': postId,
+      'user_id': userId,
+      'reason': reason,
+    });
+  }
+
+  Future<void> blockUser(String blockedUserId) async {
+    await _supabase.from('user_blocks').insert({
+      'user_id': userId,
+      'blocked_user_id': blockedUserId,
+    });
+  }
+}
+
+
+######## FILE: lib/core/theme/app_theme.dart ########
+
+import 'package:flutter/material.dart';
+
+class AppTheme {
+  static ThemeData dark = ThemeData(
+    scaffoldBackgroundColor: const Color(0xff0F1115),
+    cardColor: const Color(0xff1B1E24),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xff0F1115),
+      elevation: 0,
+    ),
+    colorScheme: const ColorScheme.dark(
+      primary: Color(0xffFF6B6B),
+      secondary: Color(0xff4ECDC4),
+    ),
+  );
 }
 
 
@@ -669,94 +843,45 @@ class SnackbarHelper {
 ######## FILE: lib/features/feed/feed_screen.dart ########
 
 import 'package:flutter/material.dart';
-
-import '../../core/models/audio_post.dart';
 import '../../core/services/supabase_service.dart';
 import '../map/widgets/audio_player_sheet.dart';
+import 'widgets/voice_card.dart';
 
-class FeedScreen extends StatefulWidget {
+class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key});
 
   @override
-  State<FeedScreen> createState() => _FeedScreenState();
-}
-
-class _FeedScreenState extends State<FeedScreen> {
-  final SupabaseService service = SupabaseService();
-
-  final List<AudioPost> posts = [];
-
-  bool isLoading = false;
-  bool hasMore = true;
-
-  DateTime? lastCursor;
-
-  @override
-  void initState() {
-    super.initState();
-    loadFeed();
-  }
-
-  Future<void> loadFeed() async {
-    if (isLoading || !hasMore) return;
-
-    setState(() {
-      isLoading = true;
-    });
-
-    final fetched = await service.getFeed(before: lastCursor);
-
-    if (fetched.isEmpty) {
-      hasMore = false;
-    } else {
-      posts.addAll(fetched);
-      lastCursor = fetched.last.createdAt;
-    }
-
-    if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> refreshFeed() async {
-    posts.clear();
-    lastCursor = null;
-    hasMore = true;
-
-    await loadFeed();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: refreshFeed,
-      child: ListView.builder(
-        itemCount: posts.length + 1,
-        itemBuilder: (context, index) {
-          if (index == posts.length) {
-            if (hasMore) {
-              loadFeed();
+    final service = SupabaseService();
 
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            return const SizedBox();
+    return Scaffold(
+      appBar: AppBar(title: const Text("فید صداها")),
+      body: FutureBuilder(
+        future: service.getRankedFeed(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          final post = posts[index];
+          final posts = snapshot.data!;
 
-          return ListTile(
-            title: Text(post.id),
-            subtitle: Text(post.createdAt.toString()),
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                builder: (_) => AudioPlayerSheet(post: post),
+          return ListView.builder(
+            itemCount: posts.length,
+            itemBuilder: (_, index) {
+              final post = posts[index];
+
+              return VoiceCard(
+                post: post,
+                onPlay: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (_) => AudioPlayerSheet(post: post),
+                  );
+                },
+                onLike: () async {
+                  await service.toggleLike(post.id);
+                },
+                onComment: () {},
               );
             },
           );
@@ -767,8 +892,134 @@ class _FeedScreenState extends State<FeedScreen> {
 }
 
 
+######## FILE: lib/features/feed/widgets/comment_sheet.dart ########
+
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../core/repositories/audio_repository.dart';
+
+class CommentSheet extends StatefulWidget {
+  final String postId;
+
+  const CommentSheet({super.key, required this.postId});
+
+  @override
+  State<CommentSheet> createState() => _CommentSheetState();
+}
+
+class _CommentSheetState extends State<CommentSheet> {
+  final repository = Get.find<AudioRepository>();
+  final controller = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: repository.fetchComments(widget.postId),
+      builder: (context, snapshot) {
+        final comments = snapshot.data ?? [];
+
+        return Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                itemCount: comments.length,
+                itemBuilder: (_, index) {
+                  final comment = comments[index];
+
+                  return ListTile(
+                    title: Text(comment.text),
+                    subtitle: Text("Reply available"),
+                  );
+                },
+              ),
+            ),
+            TextField(controller: controller),
+            ElevatedButton(
+              onPressed: () async {
+                await repository.createComment(
+                  postId: widget.postId,
+                  text: controller.text,
+                );
+                Navigator.pop(context);
+              },
+              child: const Text("ارسال"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+
+######## FILE: lib/features/feed/widgets/voice_card.dart ########
+
+import 'package:flutter/material.dart';
+import '../../../core/models/audio_post.dart';
+
+class VoiceCard extends StatelessWidget {
+  final AudioPost post;
+  final VoidCallback onPlay;
+  final VoidCallback onLike;
+  final VoidCallback onComment;
+
+  const VoiceCard({
+    super.key,
+    required this.post,
+    required this.onPlay,
+    required this.onLike,
+    required this.onComment,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(child: Icon(Icons.graphic_eq)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(post.city, style: const TextStyle(fontSize: 16)),
+                ),
+                Text("${post.duration}s"),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                IconButton(
+                  onPressed: onPlay,
+                  icon: const Icon(Icons.play_arrow),
+                ),
+                IconButton(
+                  onPressed: onLike,
+                  icon: Icon(
+                    post.isLiked ? Icons.favorite : Icons.favorite_border,
+                  ),
+                ),
+                IconButton(
+                  onPressed: onComment,
+                  icon: const Icon(Icons.comment),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
 ######## FILE: lib/features/map/controller/map_controller.dart ########
 
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -789,40 +1040,34 @@ class MapControllerX extends GetxController {
   final isRecordingAudio = false.obs;
   final audioPosts = <AudioPost>[].obs;
 
+  StreamSubscription? feedSubscription;
+
   @override
   void onInit() {
     super.onInit();
-    loadFeed();
+    bindFeed();
+  }
+
+  void bindFeed() {
+    feedSubscription?.cancel();
+
+    feedSubscription = repository.supabaseService.watchFeed().listen((posts) {
+      audioPosts.assignAll(posts.reversed.toList());
+    });
   }
 
   @override
   void onClose() {
+    feedSubscription?.cancel();
     audioService.dispose();
     super.onClose();
   }
 
-  /// چون نقشه فعلاً realtime نیست (SupabaseService stream ندارد)،
-  /// این متد بعد از هر ضبط جدید و در ابتدای باز شدن صفحه صدا زده می‌شود.
-  Future<void> loadFeed() async {
-    isLoading.value = true;
-    try {
-      final res = await repository.getFeed();
-      audioPosts.assignAll(res);
-    } catch (e) {
-      print("Load Feed Error: $e");
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
   Future<void> goToUserLocation() async {
-    try {
-      final pos = await locationService.getCurrent();
-      if (pos == null) return;
-      mapController.move(LatLng(pos.latitude, pos.longitude), 15);
-    } catch (e) {
-      print("Location Error: $e");
-    }
+    final pos = await locationService.getCurrent();
+    if (pos == null) return;
+
+    mapController.move(LatLng(pos.latitude, pos.longitude), 15);
   }
 
   Future<void> startAudioRecording() async {
@@ -834,17 +1079,7 @@ class MapControllerX extends GetxController {
 
   Future<void> stopAudioRecording() async {
     isRecordingAudio.value = false;
-    isLoading.value = true;
-    try {
-      final postId = await repository.createAudioPost();
-      if (postId != null) {
-        await loadFeed();
-      }
-    } catch (e) {
-      print("Stop Recording Error: $e");
-    } finally {
-      isLoading.value = false;
-    }
+    await repository.createAudioPost();
   }
 
   Future<void> playAudio(String url) async {
@@ -984,10 +1219,11 @@ class MapScreen extends StatelessWidget {
 
 ######## FILE: lib/features/map/widgets/audio_player_sheet.dart ########
 
+import 'dart:async';
 import 'package:flutter/material.dart';
-
 import '../../../core/models/audio_post.dart';
 import '../../../core/services/global_audio_player.dart';
+import 'waveform_bar.dart';
 
 class AudioPlayerSheet extends StatefulWidget {
   final AudioPost post;
@@ -1001,6 +1237,7 @@ class AudioPlayerSheet extends StatefulWidget {
 class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
   final GlobalAudioPlayer player = GlobalAudioPlayer();
 
+  StreamSubscription? _sub;
   Duration currentPosition = Duration.zero;
   Duration totalDuration = Duration.zero;
 
@@ -1008,7 +1245,7 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
   void initState() {
     super.initState();
 
-    player.positionStream.listen((position) {
+    _sub = player.positionStream.listen((position) {
       if (!mounted) return;
 
       setState(() {
@@ -1016,6 +1253,12 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
         totalDuration = player.duration ?? Duration.zero;
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   Future<void> togglePlay() async {
@@ -1041,6 +1284,8 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          const WaveformBar(),
+          const SizedBox(height: 20),
           Slider(
             value: currentPosition.inMilliseconds.toDouble(),
             min: 0,
@@ -1051,13 +1296,58 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
           ),
           IconButton(
             onPressed: togglePlay,
-            icon: Icon(
-              player.isPlaying && player.currentUrl == widget.post.audioUrl
-                  ? Icons.pause
-                  : Icons.play_arrow,
-            ),
+            icon: Icon(player.isPlaying ? Icons.pause : Icons.play_arrow),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+######## FILE: lib/features/map/widgets/voice_pin.dart ########
+
+import 'package:flutter/material.dart';
+
+class VoicePin extends StatelessWidget {
+  const VoicePin({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.redAccent,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: const Icon(Icons.mic, color: Colors.white),
+    );
+  }
+}
+
+
+######## FILE: lib/features/map/widgets/waveform_bar.dart ########
+
+import 'package:flutter/material.dart';
+
+class WaveformBar extends StatelessWidget {
+  const WaveformBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(
+        20,
+        (index) => Container(
+          width: 4,
+          height: (index % 5 + 1) * 8,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
       ),
     );
   }
@@ -1150,7 +1440,6 @@ class ProfileController extends GetxController {
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controller/profile_controller.dart';
-import '../../../core/services/global_audio_player.dart';
 
 class ProfileScreen extends StatelessWidget {
   ProfileScreen({super.key});
@@ -1159,64 +1448,31 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // قبلاً: Get.find<GlobalAudioPlayer>() -> GlobalAudioPlayer دیگر GetxController
-    // نیست (یک کلاس singleton معمولی است)، پس باید مستقیم نمونه‌سازی شود.
-    final GlobalAudioPlayer globalPlayer = GlobalAudioPlayer();
-
     return Scaffold(
-      appBar: AppBar(title: const Text("پروفایل من"), centerTitle: true),
+      appBar: AppBar(title: const Text("پروفایل")),
       body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        return Column(
+          children: [
+            const SizedBox(height: 30),
+            const CircleAvatar(radius: 45, child: Icon(Icons.person)),
+            const SizedBox(height: 12),
+            const Text("کاربر ناشناس"),
+            const SizedBox(height: 12),
+            Text("Trust Score: ${controller.trustScore.value}"),
+            Expanded(
+              child: ListView.builder(
+                itemCount: controller.myPosts.length,
+                itemBuilder: (_, index) {
+                  final post = controller.myPosts[index];
 
-        if (controller.myPosts.isEmpty) {
-          return const Center(
-            child: Text("هنوز صدایی ثبت نکردی", style: TextStyle(fontSize: 18)),
-          );
-        }
-
-        return ListView.builder(
-          itemCount: controller.myPosts.length,
-          itemBuilder: (context, index) {
-            final post = controller.myPosts[index];
-
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: ListTile(
-                // قبلاً: globalPlayer.currentUrl.value, globalPlayer.isPlaying.value
-                // (فرض GetX .obs) -> این‌ها در GlobalAudioPlayer واقعی getter
-                // معمولی هستند (String?, bool)، نه Rx.
-                leading: StatefulBuilder(
-                  builder: (context, setLocalState) {
-                    final isPlaying =
-                        globalPlayer.currentUrl == post.audioUrl &&
-                        globalPlayer.isPlaying;
-                    return IconButton(
-                      icon: Icon(
-                        isPlaying ? Icons.stop_circle : Icons.play_circle,
-                        size: 40,
-                      ),
-                      onPressed: () async {
-                        if (isPlaying) {
-                          await globalPlayer.stop();
-                        } else {
-                          await globalPlayer.play(post.audioUrl);
-                        }
-                        setLocalState(() {});
-                      },
-                    );
-                  },
-                ),
-                title: const Text("پست صوتی من"),
-                subtitle: Text(post.createdAt.toString().substring(0, 16)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.favorite),
-                  onPressed: () => controller.toggleLike(post.id),
-                ),
+                  return ListTile(
+                    title: Text(post.city),
+                    subtitle: Text("Trust: ${post.trustScore}"),
+                  );
+                },
               ),
-            );
-          },
+            ),
+          ],
         );
       }),
     );

@@ -95,6 +95,36 @@ class SupabaseService {
     return (response as List).map((e) => AudioPost.fromMap(e)).toList();
   }
 
+  Future<List<AudioPost>> getRankedFeed() async {
+    final response = await _supabase
+        .from('audio_posts')
+        .select()
+        .gte('trust_score', 50)
+        .order('score', ascending: false);
+
+    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
+  }
+
+  Stream<List<AudioPost>> watchFeed() {
+    return _supabase
+        .from('audio_posts')
+        .stream(primaryKey: ['id'])
+        .order('created_at')
+        .map((rows) => rows.map((e) => AudioPost.fromMap(e)).toList());
+  }
+
+  Future<List<AudioPost>> getMyPosts() async {
+    await signInAnonymouslyIfNeeded();
+
+    final response = await _supabase
+        .from('audio_posts')
+        .select()
+        .eq('user_id', userId!)
+        .order('created_at', ascending: false);
+
+    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
+  }
+
   /*
   -------------------------
   RATE LIMIT

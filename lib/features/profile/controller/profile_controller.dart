@@ -7,6 +7,7 @@ class ProfileController extends GetxController {
 
   final myPosts = <AudioPost>[].obs;
   final isLoading = false.obs;
+  final trustScore = 100.obs;
 
   @override
   void onInit() {

@@ -30,7 +30,7 @@ class MapControllerX extends GetxController {
   void bindFeed() {
     feedSubscription?.cancel();
 
-    feedSubscription = repository.supabaseService.watchFeed().listen((posts) {
+    feedSubscription = repository.watchFeed().listen((posts) {
       audioPosts.assignAll(posts.reversed.toList());
     });
   }

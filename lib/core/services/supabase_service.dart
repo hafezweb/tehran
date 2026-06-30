@@ -95,16 +95,6 @@ class SupabaseService {
     return (response as List).map((e) => AudioPost.fromMap(e)).toList();
   }
 
-  Future<List<AudioPost>> getRankedFeed() async {
-    final response = await _supabase
-        .from('audio_posts')
-        .select()
-        .gte('trust_score', 50)
-        .order('score', ascending: false);
-
-    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
-  }
-
   Stream<List<AudioPost>> watchFeed() {
     return _supabase
         .from('audio_posts')
@@ -147,82 +137,3 @@ class SupabaseService {
   }
 
   /*
-  -------------------------
-  SOCIAL
-  -------------------------
-  */
-
-  Future<void> toggleLike(String postId) async {
-    await _supabase.rpc('toggle_audio_like', params: {'p_post_id': postId});
-  }
-
-  Future<void> toggleSave(String postId) async {
-    await _supabase.rpc('toggle_audio_save', params: {'p_post_id': postId});
-  }
-
-  Future<List<AudioComment>> getComments(String postId) async {
-    final response = await _supabase
-        .from('audio_comments')
-        .select()
-        .eq('post_id', postId)
-        .order('created_at');
-
-    return (response as List).map((e) => AudioComment.fromMap(e)).toList();
-  }
-
-  Future<void> addComment({
-    required String postId,
-    required String text,
-  }) async {
-    await _supabase.from('audio_comments').insert({
-      'post_id': postId,
-      'user_id': userId,
-      'text': text,
-    });
-  }
-
-  Future<List<AudioReply>> getReplies(String commentId) async {
-    final response = await _supabase
-        .from('audio_replies')
-        .select()
-        .eq('comment_id', commentId)
-        .order('created_at');
-
-    return (response as List).map((e) => AudioReply.fromMap(e)).toList();
-  }
-
-  Future<void> addReply({
-    required String commentId,
-    required String text,
-  }) async {
-    await _supabase.from('audio_replies').insert({
-      'comment_id': commentId,
-      'user_id': userId,
-      'text': text,
-    });
-  }
-
-  /*
-  -------------------------
-  TRUST
-  -------------------------
-  */
-
-  Future<void> reportAudio({
-    required String postId,
-    required String reason,
-  }) async {
-    await _supabase.from('audio_reports').insert({
-      'post_id': postId,
-      'user_id': userId,
-      'reason': reason,
-    });
-  }
-
-  Future<void> blockUser(String blockedUserId) async {
-    await _supabase.from('user_blocks').insert({
-      'user_id': userId,
-      'blocked_user_id': blockedUserId,
-    });
-  }
-}

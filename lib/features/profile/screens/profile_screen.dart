@@ -12,18 +12,14 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text("پروفایل")),
       body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
         return Column(
           children: [
             const SizedBox(height: 30),
             const CircleAvatar(radius: 45, child: Icon(Icons.person)),
             const SizedBox(height: 12),
-            const Text("کاربر ناشناس", style: TextStyle(fontSize: 18)),
-            const Text("صدای شهر من"),
-            const SizedBox(height: 20),
+            const Text("کاربر ناشناس"),
+            const SizedBox(height: 12),
+            Text("Trust Score: ${controller.trustScore.value}"),
             Expanded(
               child: ListView.builder(
                 itemCount: controller.myPosts.length,
@@ -32,7 +28,7 @@ class ProfileScreen extends StatelessWidget {
 
                   return ListTile(
                     title: Text(post.city),
-                    subtitle: Text(post.createdAt.toString()),
+                    subtitle: Text("Trust: ${post.trustScore}"),
                   );
                 },
               ),

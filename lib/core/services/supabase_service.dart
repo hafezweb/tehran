@@ -1,10 +1,20 @@
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../models/audio_post.dart';
 import '../models/audio_comment.dart';
+import '../models/audio_reply.dart';
 
 class SupabaseService {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  final _supabase = Supabase.instance.client;
+
+  String? get userId => _supabase.auth.currentUser?.id;
+
+  /*
+  -------------------------
+  AUTH
+  -------------------------
+  */
 
   Future<void> signInAnonymouslyIfNeeded() async {
     if (_supabase.auth.currentSession == null) {
@@ -12,36 +22,46 @@ class SupabaseService {
     }
   }
 
-  String? get userId => _supabase.auth.currentUser?.id;
+  /*
+  -------------------------
+  STORAGE
+  -------------------------
+  */
 
   Future<String?> uploadAudio(File file, String fileName) async {
     try {
+      await signInAnonymouslyIfNeeded();
+
       await _supabase.storage.from('audio_posts').upload(fileName, file);
+
       return _supabase.storage.from('audio_posts').getPublicUrl(fileName);
     } catch (_) {
       return null;
     }
   }
 
+  Future<void> deleteAudio(String fileName) async {
+    await _supabase.storage.from('audio_posts').remove([fileName]);
+  }
+
+  /*
+  -------------------------
+  POSTS
+  -------------------------
+  */
+
   Future<Map<String, dynamic>?> createAudioPost({
     required String audioUrl,
     required double lat,
     required double lng,
   }) async {
-    var uid = userId;
-
-    if (uid == null) {
-      final authResponse = await _supabase.auth.signInAnonymously();
-      uid = authResponse.user?.id;
-    }
-
-    if (uid == null) return null;
+    await signInAnonymouslyIfNeeded();
 
     try {
       final response = await _supabase
           .from('audio_posts')
           .insert({
-            'user_id': uid,
+            'user_id': userId,
             'audio_url': audioUrl,
             'latitude': lat,
             'longitude': lng,
@@ -49,9 +69,11 @@ class SupabaseService {
             'likes_count': 0,
             'comments_count': 0,
             'is_liked': false,
+            'is_saved': false,
             'is_anonymous': true,
             'city': 'Tehran',
             'score': 0,
+            'trust_score': 100,
             'created_at': DateTime.now().toIso8601String(),
           })
           .select()
@@ -63,66 +85,49 @@ class SupabaseService {
     }
   }
 
-  Future<void> deleteAudio(String fileName) async {
-    await _supabase.storage.from('audio_posts').remove([fileName]);
-  }
-
-  Future<List<AudioPost>> getFeed({DateTime? before, int limit = 20}) async {
-    final filterBuilder = _supabase.from('audio_posts').select();
-
-    final response =
-        await (before != null
-                ? filterBuilder.lt('created_at', before.toIso8601String())
-                : filterBuilder)
-            .order('created_at', ascending: false)
-            .limit(limit);
-
-    return (response as List).map((item) => AudioPost.fromMap(item)).toList();
-  }
-
-  Stream<List<AudioPost>> watchFeed() {
-    return _supabase
+  Future<List<AudioPost>> getRankedFeed() async {
+    final response = await _supabase
         .from('audio_posts')
-        .stream(primaryKey: ['id'])
-        .order('created_at')
-        .map((data) => data.map((item) => AudioPost.fromMap(item)).toList());
+        .select()
+        .gte('trust_score', 50)
+        .order('score', ascending: false);
+
+    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
   }
 
-  Future<List<AudioPost>> getMyPosts() async {
-    final uid = userId;
-    if (uid == null) return [];
+  /*
+  -------------------------
+  RATE LIMIT
+  -------------------------
+  */
+
+  Future<bool> canUpload() async {
+    await signInAnonymouslyIfNeeded();
 
     final response = await _supabase
         .from('audio_posts')
         .select()
-        .eq('user_id', uid)
-        .order('created_at', ascending: false);
+        .eq('user_id', userId!)
+        .gte(
+          'created_at',
+          DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
+        );
 
-    return (response as List).map((item) => AudioPost.fromMap(item)).toList();
+    return (response as List).length < 3;
   }
 
+  /*
+  -------------------------
+  SOCIAL
+  -------------------------
+  */
+
   Future<void> toggleLike(String postId) async {
-    final uid = userId;
-    if (uid == null) return;
+    await _supabase.rpc('toggle_audio_like', params: {'p_post_id': postId});
+  }
 
-    final exists = await _supabase
-        .from('audio_likes')
-        .select('id')
-        .eq('user_id', uid)
-        .eq('post_id', postId);
-
-    if ((exists as List).isEmpty) {
-      await _supabase.from('audio_likes').insert({
-        'user_id': uid,
-        'post_id': postId,
-      });
-    } else {
-      await _supabase
-          .from('audio_likes')
-          .delete()
-          .eq('user_id', uid)
-          .eq('post_id', postId);
-    }
+  Future<void> toggleSave(String postId) async {
+    await _supabase.rpc('toggle_audio_save', params: {'p_post_id': postId});
   }
 
   Future<List<AudioComment>> getComments(String postId) async {
@@ -132,45 +137,62 @@ class SupabaseService {
         .eq('post_id', postId)
         .order('created_at');
 
-    return (response as List)
-        .map((item) => AudioComment.fromMap(item))
-        .toList();
+    return (response as List).map((e) => AudioComment.fromMap(e)).toList();
   }
 
   Future<void> addComment({
     required String postId,
     required String text,
   }) async {
-    final uid = userId;
-    if (uid == null) return;
-
     await _supabase.from('audio_comments').insert({
       'post_id': postId,
-      'user_id': uid,
+      'user_id': userId,
       'text': text,
-      'created_at': DateTime.now().toIso8601String(),
     });
   }
 
-  Future<List<AudioPost>> getRankedFeed() async {
+  Future<List<AudioReply>> getReplies(String commentId) async {
     final response = await _supabase
-        .from('audio_posts')
+        .from('audio_replies')
         .select()
-        .order('likes_count', ascending: false);
+        .eq('comment_id', commentId)
+        .order('created_at');
 
-    return (response as List).map((item) => AudioPost.fromMap(item)).toList();
+    return (response as List).map((e) => AudioReply.fromMap(e)).toList();
   }
 
-  Future<List<AudioPost>> getNearbyFeed({
-    required double lat,
-    required double lng,
-    required double radius,
+  Future<void> addReply({
+    required String commentId,
+    required String text,
   }) async {
-    final response = await _supabase.rpc(
-      'get_nearby_audio_posts',
-      params: {'user_lat': lat, 'user_lng': lng, 'radius_km': radius},
-    );
+    await _supabase.from('audio_replies').insert({
+      'comment_id': commentId,
+      'user_id': userId,
+      'text': text,
+    });
+  }
 
-    return (response as List).map((item) => AudioPost.fromMap(item)).toList();
+  /*
+  -------------------------
+  TRUST
+  -------------------------
+  */
+
+  Future<void> reportAudio({
+    required String postId,
+    required String reason,
+  }) async {
+    await _supabase.from('audio_reports').insert({
+      'post_id': postId,
+      'user_id': userId,
+      'reason': reason,
+    });
+  }
+
+  Future<void> blockUser(String blockedUserId) async {
+    await _supabase.from('user_blocks').insert({
+      'user_id': userId,
+      'blocked_user_id': blockedUserId,
+    });
   }
 }

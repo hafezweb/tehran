@@ -22,33 +22,33 @@ class _CommentSheetState extends State<CommentSheet> {
       builder: (context, snapshot) {
         final comments = snapshot.data ?? [];
 
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: comments.length,
-                  itemBuilder: (_, index) {
-                    final comment = comments[index];
+        return Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                itemCount: comments.length,
+                itemBuilder: (_, index) {
+                  final comment = comments[index];
 
-                    return ListTile(title: Text(comment.text));
-                  },
-                ),
-              ),
-              TextField(controller: controller),
-              ElevatedButton(
-                onPressed: () async {
-                  await repository.createComment(
-                    postId: widget.postId,
-                    text: controller.text,
+                  return ListTile(
+                    title: Text(comment.text),
+                    subtitle: Text("Reply available"),
                   );
-                  Navigator.pop(context);
                 },
-                child: const Text("ارسال"),
               ),
-            ],
-          ),
+            ),
+            TextField(controller: controller),
+            ElevatedButton(
+              onPressed: () async {
+                await repository.createComment(
+                  postId: widget.postId,
+                  text: controller.text,
+                );
+                Navigator.pop(context);
+              },
+              child: const Text("ارسال"),
+            ),
+          ],
         );
       },
     );

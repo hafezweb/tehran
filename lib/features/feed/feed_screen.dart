@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/services/supabase_service.dart';
 import '../map/widgets/audio_player_sheet.dart';
-import 'widgets/comment_sheet.dart';
 import 'widgets/voice_card.dart';
 
 class FeedScreen extends StatelessWidget {
@@ -38,12 +37,7 @@ class FeedScreen extends StatelessWidget {
                 onLike: () async {
                   await service.toggleLike(post.id);
                 },
-                onComment: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (_) => CommentSheet(postId: post.id),
-                  );
-                },
+                onComment: () {},
               );
             },
           );

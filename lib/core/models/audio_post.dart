@@ -8,9 +8,11 @@ class AudioPost {
   final int likesCount;
   final int commentsCount;
   final bool isLiked;
+  final bool isSaved;
   final bool isAnonymous;
   final String city;
   final double score;
+  final int trustScore;
   final DateTime createdAt;
 
   const AudioPost({
@@ -23,29 +25,31 @@ class AudioPost {
     required this.likesCount,
     required this.commentsCount,
     required this.isLiked,
+    required this.isSaved,
     required this.isAnonymous,
     required this.city,
     required this.score,
+    required this.trustScore,
     required this.createdAt,
   });
 
   factory AudioPost.fromMap(Map<String, dynamic> map) {
     return AudioPost(
-      id: map['id']?.toString() ?? '',
-      userId: map['user_id']?.toString() ?? '',
-      audioUrl: map['audio_url']?.toString() ?? '',
-      latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
-      longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
-      duration: (map['duration'] as num?)?.toInt() ?? 0,
-      likesCount: (map['likes_count'] as num?)?.toInt() ?? 0,
-      commentsCount: (map['comments_count'] as num?)?.toInt() ?? 0,
+      id: map['id'] ?? '',
+      userId: map['user_id'] ?? '',
+      audioUrl: map['audio_url'] ?? '',
+      latitude: (map['latitude'] as num).toDouble(),
+      longitude: (map['longitude'] as num).toDouble(),
+      duration: map['duration'] ?? 0,
+      likesCount: map['likes_count'] ?? 0,
+      commentsCount: map['comments_count'] ?? 0,
       isLiked: map['is_liked'] ?? false,
+      isSaved: map['is_saved'] ?? false,
       isAnonymous: map['is_anonymous'] ?? true,
-      city: map['city']?.toString() ?? '',
-      score: (map['score'] as num?)?.toDouble() ?? 0.0,
-      createdAt:
-          DateTime.tryParse(map['created_at']?.toString() ?? '') ??
-          DateTime.now(),
+      city: map['city'] ?? '',
+      score: (map['score'] as num?)?.toDouble() ?? 0,
+      trustScore: map['trust_score'] ?? 100,
+      createdAt: DateTime.parse(map['created_at']),
     );
   }
 }

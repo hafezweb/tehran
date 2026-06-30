@@ -35,13 +35,18 @@ class SupabaseService {
       await _supabase.storage.from('audio_posts').upload(fileName, file);
 
       return _supabase.storage.from('audio_posts').getPublicUrl(fileName);
-    } catch (_) {
+    } catch (e) {
+      print('uploadAudio error: $e');
       return null;
     }
   }
 
   Future<void> deleteAudio(String fileName) async {
-    await _supabase.storage.from('audio_posts').remove([fileName]);
+    try {
+      await _supabase.storage.from('audio_posts').remove([fileName]);
+    } catch (e) {
+      print('deleteAudio error: $e');
+    }
   }
 
   /*
@@ -66,21 +71,13 @@ class SupabaseService {
             'latitude': lat,
             'longitude': lng,
             'duration': 90,
-            'likes_count': 0,
-            'comments_count': 0,
-            'is_liked': false,
-            'is_saved': false,
-            'is_anonymous': true,
-            'city': 'Tehran',
-            'score': 0,
-            'trust_score': 100,
-            'created_at': DateTime.now().toIso8601String(),
           })
           .select()
           .single();
 
       return response;
-    } catch (_) {
+    } catch (e) {
+      print('createAudioPost error: $e');
       return null;
     }
   }
@@ -89,8 +86,7 @@ class SupabaseService {
     final response = await _supabase
         .from('audio_posts')
         .select()
-        .gte('trust_score', 50)
-        .order('score', ascending: false);
+        .order('created_at', ascending: false);
 
     return (response as List).map((e) => AudioPost.fromMap(e)).toList();
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/audio_post.dart';
+import '../../../core/utils/time_format.dart';
 
 class VoiceCard extends StatelessWidget {
   final AudioPost post;
@@ -28,7 +29,19 @@ class VoiceCard extends StatelessWidget {
                 const CircleAvatar(child: Icon(Icons.graphic_eq)),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(post.city, style: const TextStyle(fontSize: 16)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(post.city, style: const TextStyle(fontSize: 16)),
+                      Text(
+                        timeAgoFa(post.createdAt),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Text("${post.duration}s"),
               ],

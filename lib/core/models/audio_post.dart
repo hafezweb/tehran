@@ -49,7 +49,7 @@ class AudioPost {
       city: map['city'] ?? '',
       score: (map['score'] as num?)?.toDouble() ?? 0,
       trustScore: map['trust_score'] ?? 100,
-      createdAt: DateTime.parse(map['created_at']),
+      createdAt: DateTime.parse(map['created_at']).toUtc(),
     );
   }
 }

@@ -59,6 +59,9 @@ class SupabaseService {
     required String audioUrl,
     required double lat,
     required double lng,
+    String? title,
+    String? creatorName,
+    String? coverImage,
   }) async {
     await signInAnonymouslyIfNeeded();
 
@@ -71,6 +74,9 @@ class SupabaseService {
             'latitude': lat,
             'longitude': lng,
             'duration': 90,
+            'title': title ?? 'بدون عنوان',
+            'creator_name': creatorName ?? 'ناشناس',
+            'cover_image': coverImage ?? '',
           })
           .select()
           .single();
@@ -88,15 +94,15 @@ class SupabaseService {
         .select()
         .order('created_at', ascending: false);
 
-    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
+    return (response as List).map((row) => AudioPost.fromMap(row)).toList();
   }
 
   Stream<List<AudioPost>> watchFeed() {
     return _supabase
         .from('audio_posts')
         .stream(primaryKey: ['id'])
-        .order('created_at')
-        .map((rows) => rows.map((e) => AudioPost.fromMap(e)).toList());
+        .order('created_at', ascending: false)
+        .map((rows) => rows.map((row) => AudioPost.fromMap(row)).toList());
   }
 
   Future<List<AudioPost>> getMyPosts() async {
@@ -108,7 +114,7 @@ class SupabaseService {
         .eq('user_id', userId!)
         .order('created_at', ascending: false);
 
-    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
+    return (response as List).map((row) => AudioPost.fromMap(row)).toList();
   }
 
   /*

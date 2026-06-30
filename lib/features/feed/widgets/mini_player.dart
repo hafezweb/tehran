@@ -38,7 +38,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (player.currentUrl == null) {
+    if (player.currentUrl == null || total == Duration.zero) {
       return const SizedBox();
     }
 

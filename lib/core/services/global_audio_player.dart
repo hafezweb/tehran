@@ -5,7 +5,13 @@ class GlobalAudioPlayer {
 
   factory GlobalAudioPlayer() => _instance;
 
-  GlobalAudioPlayer._internal();
+  GlobalAudioPlayer._internal() {
+    _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        _currentUrl = null;
+      }
+    });
+  }
 
   final AudioPlayer _player = AudioPlayer();
 
@@ -46,5 +52,10 @@ class GlobalAudioPlayer {
 
   Future<void> seek(Duration position) async {
     await _player.seek(position);
+  }
+
+  Future<void> dispose() async {
+    await _player.dispose();
+    _currentUrl = null;
   }
 }

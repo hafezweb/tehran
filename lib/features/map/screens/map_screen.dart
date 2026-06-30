@@ -5,7 +5,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 
 import '../controller/map_controller.dart';
-import '../widgets/audio_player_sheet.dart';
 
 class MapScreen extends StatelessWidget {
   MapScreen({super.key});
@@ -38,21 +37,13 @@ class MapScreen extends StatelessWidget {
                     zoomToBoundsOnClick: true,
                     spiderfyCluster: true,
                     markers: controller.audioPosts.map((post) {
-                      // قبلاً: post.lat, post.lng -> این فیلدها وجود ندارند
-                      // الان: post.latitude, post.longitude (طبق AudioPost واقعی)
                       return Marker(
                         point: LatLng(post.latitude, post.longitude),
                         width: 50,
                         height: 50,
                         child: GestureDetector(
-                          onTap: () {
-                            showModalBottomSheet(
-                              context: context,
-                              // قبلاً: AudioPlayerSheet(post: post, onPlay: ..., onStop: ...)
-                              // الان: AudioPlayerSheet فقط post می‌گیرد؛ پخش را خودش
-                              // از طریق GlobalAudioPlayer مدیریت می‌کند.
-                              builder: (_) => AudioPlayerSheet(post: post),
-                            );
+                          onTap: () async {
+                            await controller.playAudio(post.audioUrl);
                           },
                           child: const Icon(
                             Icons.graphic_eq,

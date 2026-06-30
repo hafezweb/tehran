@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 
 import '../../core/repositories/audio_repository.dart';
 import '../../core/models/audio_post.dart';
-import '../map/widgets/audio_player_sheet.dart';
 import 'widgets/voice_card.dart';
 
 class FeedScreen extends StatelessWidget {
@@ -15,12 +14,11 @@ class FeedScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-
       body: StreamBuilder<List<AudioPost>>(
         stream: repository.watchFeed(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(
+            return const Center(
               child: Text(
                 "خطا در بارگذاری فید",
                 style: TextStyle(color: Colors.white),
@@ -60,7 +58,6 @@ class FeedScreen extends StatelessWidget {
             ),
             child: Stack(
               children: [
-                /// blur orb top-left
                 Positioned(
                   top: -120,
                   left: -50,
@@ -74,7 +71,6 @@ class FeedScreen extends StatelessWidget {
                   ),
                 ),
 
-                /// blur orb center-right
                 Positioned(
                   top: 220,
                   right: -80,
@@ -88,7 +84,6 @@ class FeedScreen extends StatelessWidget {
                   ),
                 ),
 
-                /// blur orb bottom-left
                 Positioned(
                   bottom: 140,
                   left: -70,
@@ -116,13 +111,8 @@ class FeedScreen extends StatelessWidget {
 
                       return VoiceCard(
                         post: post,
-                        onPlay: () {
-                          showModalBottomSheet(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            isScrollControlled: true,
-                            builder: (_) => AudioPlayerSheet(post: post),
-                          );
+                        onPlay: () async {
+                          await repository.playAudio(post.audioUrl);
                         },
                       );
                     },

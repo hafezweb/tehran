@@ -1,92 +1,49 @@
 import 'package:flutter/material.dart';
-
-import '../../core/models/audio_post.dart';
 import '../../core/services/supabase_service.dart';
 import '../map/widgets/audio_player_sheet.dart';
+import 'widgets/comment_sheet.dart';
+import 'widgets/voice_card.dart';
 
-class FeedScreen extends StatefulWidget {
+class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key});
 
   @override
-  State<FeedScreen> createState() => _FeedScreenState();
-}
-
-class _FeedScreenState extends State<FeedScreen> {
-  final SupabaseService service = SupabaseService();
-
-  final List<AudioPost> posts = [];
-
-  bool isLoading = false;
-  bool hasMore = true;
-
-  DateTime? lastCursor;
-
-  @override
-  void initState() {
-    super.initState();
-    loadFeed();
-  }
-
-  Future<void> loadFeed() async {
-    if (isLoading || !hasMore) return;
-
-    setState(() {
-      isLoading = true;
-    });
-
-    final fetched = await service.getFeed(before: lastCursor);
-
-    if (fetched.isEmpty) {
-      hasMore = false;
-    } else {
-      posts.addAll(fetched);
-      lastCursor = fetched.last.createdAt;
-    }
-
-    if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> refreshFeed() async {
-    posts.clear();
-    lastCursor = null;
-    hasMore = true;
-
-    await loadFeed();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: refreshFeed,
-      child: ListView.builder(
-        itemCount: posts.length + 1,
-        itemBuilder: (context, index) {
-          if (index == posts.length) {
-            if (hasMore) {
-              loadFeed();
+    final service = SupabaseService();
 
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            return const SizedBox();
+    return Scaffold(
+      appBar: AppBar(title: const Text("فید صداها")),
+      body: FutureBuilder(
+        future: service.getRankedFeed(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          final post = posts[index];
+          final posts = snapshot.data!;
 
-          return ListTile(
-            title: Text(post.id),
-            subtitle: Text(post.createdAt.toString()),
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                builder: (_) => AudioPlayerSheet(post: post),
+          return ListView.builder(
+            itemCount: posts.length,
+            itemBuilder: (_, index) {
+              final post = posts[index];
+
+              return VoiceCard(
+                post: post,
+                onPlay: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (_) => AudioPlayerSheet(post: post),
+                  );
+                },
+                onLike: () async {
+                  await service.toggleLike(post.id);
+                },
+                onComment: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (_) => CommentSheet(postId: post.id),
+                  );
+                },
               );
             },
           );

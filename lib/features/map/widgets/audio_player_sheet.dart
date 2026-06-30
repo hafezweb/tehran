@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-
 import '../../../core/models/audio_post.dart';
 import '../../../core/services/global_audio_player.dart';
+import 'waveform_bar.dart';
 
 class AudioPlayerSheet extends StatefulWidget {
   final AudioPost post;
@@ -15,6 +16,7 @@ class AudioPlayerSheet extends StatefulWidget {
 class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
   final GlobalAudioPlayer player = GlobalAudioPlayer();
 
+  StreamSubscription? _sub;
   Duration currentPosition = Duration.zero;
   Duration totalDuration = Duration.zero;
 
@@ -22,7 +24,7 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
   void initState() {
     super.initState();
 
-    player.positionStream.listen((position) {
+    _sub = player.positionStream.listen((position) {
       if (!mounted) return;
 
       setState(() {
@@ -30,6 +32,12 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
         totalDuration = player.duration ?? Duration.zero;
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   Future<void> togglePlay() async {
@@ -55,6 +63,8 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          const WaveformBar(),
+          const SizedBox(height: 20),
           Slider(
             value: currentPosition.inMilliseconds.toDouble(),
             min: 0,
@@ -65,11 +75,7 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
           ),
           IconButton(
             onPressed: togglePlay,
-            icon: Icon(
-              player.isPlaying && player.currentUrl == widget.post.audioUrl
-                  ? Icons.pause
-                  : Icons.play_arrow,
-            ),
+            icon: Icon(player.isPlaying ? Icons.pause : Icons.play_arrow),
           ),
         ],
       ),

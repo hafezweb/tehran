@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -5,8 +6,9 @@ class AudioService {
   final AudioRecorder _recorder = AudioRecorder();
 
   String? _recordPath;
-
   bool isRecording = false;
+
+  Timer? _timer;
 
   Future<bool> startRecording() async {
     final hasPermission = await _recorder.hasPermission();
@@ -23,19 +25,28 @@ class AudioService {
     );
 
     isRecording = true;
+
+    _timer?.cancel();
+    _timer = Timer(const Duration(seconds: 90), () async {
+      if (isRecording) {
+        await stopRecording();
+      }
+    });
+
     return true;
   }
 
   Future<String?> stopRecording() async {
-    final path = await _recorder.stop();
+    _timer?.cancel();
 
-    print("RECORDED FILE PATH: $path");
+    final path = await _recorder.stop();
 
     isRecording = false;
     return path;
   }
 
   void dispose() {
+    _timer?.cancel();
     _recorder.dispose();
   }
 }

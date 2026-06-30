@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -18,40 +19,34 @@ class MapControllerX extends GetxController {
   final isRecordingAudio = false.obs;
   final audioPosts = <AudioPost>[].obs;
 
+  StreamSubscription? feedSubscription;
+
   @override
   void onInit() {
     super.onInit();
-    loadFeed();
+    bindFeed();
+  }
+
+  void bindFeed() {
+    feedSubscription?.cancel();
+
+    feedSubscription = repository.supabaseService.watchFeed().listen((posts) {
+      audioPosts.assignAll(posts.reversed.toList());
+    });
   }
 
   @override
   void onClose() {
+    feedSubscription?.cancel();
     audioService.dispose();
     super.onClose();
   }
 
-  /// چون نقشه فعلاً realtime نیست (SupabaseService stream ندارد)،
-  /// این متد بعد از هر ضبط جدید و در ابتدای باز شدن صفحه صدا زده می‌شود.
-  Future<void> loadFeed() async {
-    isLoading.value = true;
-    try {
-      final res = await repository.getFeed();
-      audioPosts.assignAll(res);
-    } catch (e) {
-      print("Load Feed Error: $e");
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
   Future<void> goToUserLocation() async {
-    try {
-      final pos = await locationService.getCurrent();
-      if (pos == null) return;
-      mapController.move(LatLng(pos.latitude, pos.longitude), 15);
-    } catch (e) {
-      print("Location Error: $e");
-    }
+    final pos = await locationService.getCurrent();
+    if (pos == null) return;
+
+    mapController.move(LatLng(pos.latitude, pos.longitude), 15);
   }
 
   Future<void> startAudioRecording() async {
@@ -63,17 +58,7 @@ class MapControllerX extends GetxController {
 
   Future<void> stopAudioRecording() async {
     isRecordingAudio.value = false;
-    isLoading.value = true;
-    try {
-      final postId = await repository.createAudioPost();
-      if (postId != null) {
-        await loadFeed();
-      }
-    } catch (e) {
-      print("Stop Recording Error: $e");
-    } finally {
-      isLoading.value = false;
-    }
+    await repository.createAudioPost();
   }
 
   Future<void> playAudio(String url) async {

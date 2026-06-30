@@ -13,6 +13,7 @@ lib/core/services/supabase_service.dart
 lib/core/theme/app_theme.dart
 lib/core/utils/debouncer.dart
 lib/core/utils/snackbar_helper.dart
+lib/core/utils/time_format.dart
 lib/features/feed/feed_screen.dart
 lib/features/feed/widgets/comment_sheet.dart
 lib/features/feed/widgets/voice_card.dart
@@ -209,7 +210,7 @@ class AudioPost {
       city: map['city'] ?? '',
       score: (map['score'] as num?)?.toDouble() ?? 0,
       trustScore: map['trust_score'] ?? 100,
-      createdAt: DateTime.parse(map['created_at']),
+      createdAt: DateTime.parse(map['created_at']).toUtc(),
     );
   }
 }
@@ -360,6 +361,14 @@ class AudioRepository {
 
   Future<List<AudioPost>> getFeed() {
     return _supabaseService.getRankedFeed();
+  }
+
+  Stream<List<AudioPost>> watchFeed() {
+    return _supabaseService.watchFeed();
+  }
+
+  Future<List<AudioPost>> getMyPosts() {
+    return _supabaseService.getMyPosts();
   }
 
   /*
@@ -607,13 +616,18 @@ class SupabaseService {
       await _supabase.storage.from('audio_posts').upload(fileName, file);
 
       return _supabase.storage.from('audio_posts').getPublicUrl(fileName);
-    } catch (_) {
+    } catch (e) {
+      print('uploadAudio error: $e');
       return null;
     }
   }
 
   Future<void> deleteAudio(String fileName) async {
-    await _supabase.storage.from('audio_posts').remove([fileName]);
+    try {
+      await _supabase.storage.from('audio_posts').remove([fileName]);
+    } catch (e) {
+      print('deleteAudio error: $e');
+    }
   }
 
   /*
@@ -638,21 +652,13 @@ class SupabaseService {
             'latitude': lat,
             'longitude': lng,
             'duration': 90,
-            'likes_count': 0,
-            'comments_count': 0,
-            'is_liked': false,
-            'is_saved': false,
-            'is_anonymous': true,
-            'city': 'Tehran',
-            'score': 0,
-            'trust_score': 100,
-            'created_at': DateTime.now().toIso8601String(),
           })
           .select()
           .single();
 
       return response;
-    } catch (_) {
+    } catch (e) {
+      print('createAudioPost error: $e');
       return null;
     }
   }
@@ -661,8 +667,27 @@ class SupabaseService {
     final response = await _supabase
         .from('audio_posts')
         .select()
-        .gte('trust_score', 50)
-        .order('score', ascending: false);
+        .order('created_at', ascending: false);
+
+    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
+  }
+
+  Stream<List<AudioPost>> watchFeed() {
+    return _supabase
+        .from('audio_posts')
+        .stream(primaryKey: ['id'])
+        .order('created_at')
+        .map((rows) => rows.map((e) => AudioPost.fromMap(e)).toList());
+  }
+
+  Future<List<AudioPost>> getMyPosts() async {
+    await signInAnonymouslyIfNeeded();
+
+    final response = await _supabase
+        .from('audio_posts')
+        .select()
+        .eq('user_id', userId!)
+        .order('created_at', ascending: false);
 
     return (response as List).map((e) => AudioPost.fromMap(e)).toList();
   }
@@ -840,30 +865,58 @@ class SnackbarHelper {
 }
 
 
+######## FILE: lib/core/utils/time_format.dart ########
+
+String timeAgoFa(DateTime utcTime) {
+  final local = utcTime.toLocal();
+  final diff = DateTime.now().difference(local);
+
+  if (diff.inSeconds < 60) return "هم‌اکنون";
+  if (diff.inMinutes < 60) return "${diff.inMinutes} دقیقه پیش";
+  if (diff.inHours < 24) return "${diff.inHours} ساعت پیش";
+  if (diff.inDays < 7) return "${diff.inDays} روز پیش";
+
+  return "${local.year}/${local.month.toString().padLeft(2, '0')}/${local.day.toString().padLeft(2, '0')}";
+}
+
+
 ######## FILE: lib/features/feed/feed_screen.dart ########
 
 import 'package:flutter/material.dart';
-import '../../core/services/supabase_service.dart';
+import 'package:get/get.dart';
+import '../../core/repositories/audio_repository.dart';
+import '../../core/models/audio_post.dart';
 import '../map/widgets/audio_player_sheet.dart';
+import 'widgets/comment_sheet.dart';
 import 'widgets/voice_card.dart';
 
 class FeedScreen extends StatelessWidget {
-  const FeedScreen({super.key});
+  FeedScreen({super.key});
+
+  final AudioRepository repository = Get.find<AudioRepository>();
 
   @override
   Widget build(BuildContext context) {
-    final service = SupabaseService();
-
     return Scaffold(
       appBar: AppBar(title: const Text("فید صداها")),
-      body: FutureBuilder(
-        future: service.getRankedFeed(),
+      body: StreamBuilder<List<AudioPost>>(
+        stream: repository.watchFeed(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text("خطا در بارگذاری فید: ${snapshot.error}"),
+            );
+          }
+
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final posts = snapshot.data!;
+          final posts = snapshot.data!.reversed.toList();
+
+          if (posts.isEmpty) {
+            return const Center(child: Text("هنوز صدایی ثبت نشده"));
+          }
 
           return ListView.builder(
             itemCount: posts.length,
@@ -879,9 +932,23 @@ class FeedScreen extends StatelessWidget {
                   );
                 },
                 onLike: () async {
-                  await service.toggleLike(post.id);
+                  await repository.toggleLike(post.id);
                 },
-                onComment: () {},
+                onComment: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => Padding(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).viewInsets.bottom,
+                      ),
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.7,
+                        child: CommentSheet(postId: post.id),
+                      ),
+                    ),
+                  );
+                },
               );
             },
           );
@@ -956,6 +1023,7 @@ class _CommentSheetState extends State<CommentSheet> {
 
 import 'package:flutter/material.dart';
 import '../../../core/models/audio_post.dart';
+import '../../../core/utils/time_format.dart';
 
 class VoiceCard extends StatelessWidget {
   final AudioPost post;
@@ -984,7 +1052,19 @@ class VoiceCard extends StatelessWidget {
                 const CircleAvatar(child: Icon(Icons.graphic_eq)),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(post.city, style: const TextStyle(fontSize: 16)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(post.city, style: const TextStyle(fontSize: 16)),
+                      Text(
+                        timeAgoFa(post.createdAt),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Text("${post.duration}s"),
               ],
@@ -1051,7 +1131,7 @@ class MapControllerX extends GetxController {
   void bindFeed() {
     feedSubscription?.cancel();
 
-    feedSubscription = repository.supabaseService.watchFeed().listen((posts) {
+    feedSubscription = repository.watchFeed().listen((posts) {
       audioPosts.assignAll(posts.reversed.toList());
     });
   }
@@ -1405,6 +1485,7 @@ class ProfileController extends GetxController {
 
   final myPosts = <AudioPost>[].obs;
   final isLoading = false.obs;
+  final trustScore = 100.obs;
 
   @override
   void onInit() {

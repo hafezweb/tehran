@@ -14,6 +14,9 @@ class AudioPost {
   final double score;
   final int trustScore;
   final DateTime createdAt;
+  final String title;
+  final String creatorName;
+  final String coverImage;
 
   const AudioPost({
     required this.id,
@@ -31,6 +34,9 @@ class AudioPost {
     required this.score,
     required this.trustScore,
     required this.createdAt,
+    required this.title,
+    required this.creatorName,
+    required this.coverImage,
   });
 
   factory AudioPost.fromMap(Map<String, dynamic> map) {
@@ -50,6 +56,9 @@ class AudioPost {
       score: (map['score'] as num?)?.toDouble() ?? 0,
       trustScore: map['trust_score'] ?? 100,
       createdAt: DateTime.parse(map['created_at']).toUtc(),
+      title: map['title'] ?? 'بدون عنوان',
+      creatorName: map['creator_name'] ?? 'ناشناس',
+      coverImage: map['cover_image'] ?? '',
     );
   }
 }

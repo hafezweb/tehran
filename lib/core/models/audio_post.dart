@@ -28,7 +28,7 @@ class AudioPost {
     required this.coverImage,
     this.likes = 0,
     this.comments = 0,
-    this.createdAt,
+    required this.createdAt,
   });
 
   factory AudioPost.fromMap(Map<String, dynamic> map) {

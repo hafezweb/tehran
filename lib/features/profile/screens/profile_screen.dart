@@ -28,7 +28,7 @@ class ProfileScreen extends StatelessWidget {
 
                   return ListTile(
                     title: Text(post.city),
-                    subtitle: Text("Trust: ${post.trustScore}"),
+                    subtitle: Text("City: ${post.city}"),
                   );
                 },
               ),

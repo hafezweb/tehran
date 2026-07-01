@@ -59,6 +59,7 @@ class SupabaseService {
     required String audioUrl,
     required double lat,
     required double lng,
+    required int duration,
     String? title,
     String? creatorName,
     String? coverImage,
@@ -73,7 +74,8 @@ class SupabaseService {
             'audio_url': audioUrl,
             'latitude': lat,
             'longitude': lng,
-            'duration': 90,
+            'city': 'Tehran',
+            'duration': duration,
             'title': title ?? 'بدون عنوان',
             'creator_name': creatorName ?? 'ناشناس',
             'cover_image': coverImage ?? '',
@@ -101,8 +103,14 @@ class SupabaseService {
     return _supabase
         .from('audio_posts')
         .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false)
-        .map((rows) => rows.map((row) => AudioPost.fromMap(row)).toList());
+        .map(
+          (rows) =>
+              rows.map((row) => AudioPost.fromMap(row)).toList()..sort((a, b) {
+                final aTime = a.createdAt ?? DateTime(2000);
+                final bTime = b.createdAt ?? DateTime(2000);
+                return bTime.compareTo(aTime);
+              }),
+        );
   }
 
   Future<List<AudioPost>> getMyPosts() async {

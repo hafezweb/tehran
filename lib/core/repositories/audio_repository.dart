@@ -50,6 +50,7 @@ class AudioRepository {
     if (filePath == null) return null;
 
     final file = File(filePath);
+    final duration = await _audioService.getAudioDuration(filePath);
     if (!await file.exists()) return null;
 
     final position = await getCurrentLocation();
@@ -65,6 +66,7 @@ class AudioRepository {
       audioUrl: audioUrl,
       lat: position.latitude,
       lng: position.longitude,
+      duration: duration,
     );
 
     if (result == null) {

@@ -14,7 +14,7 @@ class AudioPost {
   /// optional/future-safe
   final int likes;
   final int comments;
-  final DateTime? createdAt;
+  final DateTime createdAt;
 
   AudioPost({
     required this.id,
@@ -59,9 +59,9 @@ class AudioPost {
 
       comments: map['comments'] == null ? 0 : (map['comments'] as num).toInt(),
 
-      createdAt: map['created_at'] == null
-          ? null
-          : DateTime.tryParse(map['created_at'].toString()),
+      createdAt:
+          DateTime.tryParse(map['created_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 

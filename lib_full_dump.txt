@@ -16,6 +16,7 @@ lib/core/utils/snackbar_helper.dart
 lib/core/utils/time_format.dart
 lib/features/feed/feed_screen.dart
 lib/features/feed/widgets/comment_sheet.dart
+lib/features/feed/widgets/mini_player.dart
 lib/features/feed/widgets/voice_card.dart
 lib/features/map/controller/map_controller.dart
 lib/features/map/screens/map_screen.dart
@@ -82,9 +83,11 @@ class MyApp extends StatelessWidget {
 ######## FILE: lib/app/app_shell.dart ########
 
 import 'package:flutter/material.dart';
-import '../features/map/screens/map_screen.dart';
+
 import '../features/feed/feed_screen.dart';
+import '../features/map/screens/map_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
+import '../features/feed/widgets/mini_player.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -101,25 +104,60 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    pages = [
-      MapScreen(),
-      FeedScreen(),
-      ProfileScreen(),
-    ];
+
+    pages = [MapScreen(), FeedScreen(), ProfileScreen()];
+  }
+
+  Widget navItem(IconData icon, String title, int i) {
+    final selected = index == i;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          index = i;
+        });
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: selected ? Colors.white : Colors.white38),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              color: selected ? Colors.white : Colors.white38,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: index, children: pages),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: index,
-        onTap: (i) => setState(() => index = i),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: "نقشه"),
-          BottomNavigationBarItem(icon: Icon(Icons.feed), label: "فید"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "پروفایل"),
+      body: Stack(
+        children: [
+          IndexedStack(index: index, children: pages),
+
+          const MiniPlayer(),
         ],
+      ),
+      bottomNavigationBar: Container(
+        height: 82,
+        decoration: BoxDecoration(
+          color: Colors.black,
+          border: Border(top: BorderSide(color: Colors.white.withOpacity(.08))),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            navItem(Icons.map, "نقشه", 0),
+            navItem(Icons.feed, "فید", 1),
+            navItem(Icons.person, "پروفایل", 2),
+          ],
+        ),
       ),
     );
   }
@@ -161,56 +199,115 @@ class AudioComment {
 
 class AudioPost {
   final String id;
-  final String userId;
   final String audioUrl;
   final double latitude;
   final double longitude;
-  final int duration;
-  final int likesCount;
-  final int commentsCount;
-  final bool isLiked;
-  final bool isSaved;
-  final bool isAnonymous;
   final String city;
-  final double score;
-  final int trustScore;
-  final DateTime createdAt;
+  final int duration;
 
-  const AudioPost({
+  /// new fields
+  final String title;
+  final String creatorName;
+  final String coverImage;
+
+  /// optional/future-safe
+  final int likes;
+  final int comments;
+  final DateTime? createdAt;
+
+  AudioPost({
     required this.id,
-    required this.userId,
     required this.audioUrl,
     required this.latitude,
     required this.longitude,
-    required this.duration,
-    required this.likesCount,
-    required this.commentsCount,
-    required this.isLiked,
-    required this.isSaved,
-    required this.isAnonymous,
     required this.city,
-    required this.score,
-    required this.trustScore,
-    required this.createdAt,
+    required this.duration,
+    required this.title,
+    required this.creatorName,
+    required this.coverImage,
+    this.likes = 0,
+    this.comments = 0,
+    this.createdAt,
   });
 
   factory AudioPost.fromMap(Map<String, dynamic> map) {
     return AudioPost(
-      id: map['id'] ?? '',
-      userId: map['user_id'] ?? '',
-      audioUrl: map['audio_url'] ?? '',
-      latitude: (map['latitude'] as num).toDouble(),
-      longitude: (map['longitude'] as num).toDouble(),
-      duration: map['duration'] ?? 0,
-      likesCount: map['likes_count'] ?? 0,
-      commentsCount: map['comments_count'] ?? 0,
-      isLiked: map['is_liked'] ?? false,
-      isSaved: map['is_saved'] ?? false,
-      isAnonymous: map['is_anonymous'] ?? true,
-      city: map['city'] ?? '',
-      score: (map['score'] as num?)?.toDouble() ?? 0,
-      trustScore: map['trust_score'] ?? 100,
-      createdAt: DateTime.parse(map['created_at']).toUtc(),
+      id: (map['id'] ?? '').toString(),
+
+      audioUrl: (map['audio_url'] ?? '').toString(),
+
+      latitude: map['latitude'] == null
+          ? 0.0
+          : (map['latitude'] as num).toDouble(),
+
+      longitude: map['longitude'] == null
+          ? 0.0
+          : (map['longitude'] as num).toDouble(),
+
+      city: (map['city'] ?? '').toString(),
+
+      duration: map['duration'] == null ? 0 : (map['duration'] as num).toInt(),
+
+      title: (map['title'] ?? 'بدون عنوان').toString(),
+
+      creatorName: (map['creator_name'] ?? 'ناشناس').toString(),
+
+      coverImage: (map['cover_image'] ?? '').toString(),
+
+      likes: map['likes'] == null ? 0 : (map['likes'] as num).toInt(),
+
+      comments: map['comments'] == null ? 0 : (map['comments'] as num).toInt(),
+
+      createdAt: map['created_at'] == null
+          ? null
+          : DateTime.tryParse(map['created_at'].toString()),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'audio_url': audioUrl,
+      'latitude': latitude,
+      'longitude': longitude,
+      'city': city,
+      'duration': duration,
+      'title': title,
+      'creator_name': creatorName,
+      'cover_image': coverImage,
+      'likes': likes,
+      'comments': comments,
+      'created_at': createdAt?.toIso8601String(),
+    };
+  }
+
+  AudioPost copyWith({
+    String? id,
+    String? audioUrl,
+    double? latitude,
+    double? longitude,
+    String? city,
+    int? duration,
+    String? title,
+    String? creatorName,
+    String? coverImage,
+    int? likes,
+    int? comments,
+    DateTime? createdAt,
+  }) {
+    return AudioPost(
+      id: id ?? this.id,
+      audioUrl: audioUrl ?? this.audioUrl,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      city: city ?? this.city,
+      duration: duration ?? this.duration,
+      title: title ?? this.title,
+      creatorName: creatorName ?? this.creatorName,
+      coverImage: coverImage ?? this.coverImage,
+      likes: likes ?? this.likes,
+      comments: comments ?? this.comments,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }
@@ -502,7 +599,13 @@ class GlobalAudioPlayer {
 
   factory GlobalAudioPlayer() => _instance;
 
-  GlobalAudioPlayer._internal();
+  GlobalAudioPlayer._internal() {
+    _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        _currentUrl = null;
+      }
+    });
+  }
 
   final AudioPlayer _player = AudioPlayer();
 
@@ -543,6 +646,11 @@ class GlobalAudioPlayer {
 
   Future<void> seek(Duration position) async {
     await _player.seek(position);
+  }
+
+  Future<void> dispose() async {
+    await _player.dispose();
+    _currentUrl = null;
   }
 }
 
@@ -640,6 +748,9 @@ class SupabaseService {
     required String audioUrl,
     required double lat,
     required double lng,
+    String? title,
+    String? creatorName,
+    String? coverImage,
   }) async {
     await signInAnonymouslyIfNeeded();
 
@@ -652,6 +763,9 @@ class SupabaseService {
             'latitude': lat,
             'longitude': lng,
             'duration': 90,
+            'title': title ?? 'بدون عنوان',
+            'creator_name': creatorName ?? 'ناشناس',
+            'cover_image': coverImage ?? '',
           })
           .select()
           .single();
@@ -669,15 +783,15 @@ class SupabaseService {
         .select()
         .order('created_at', ascending: false);
 
-    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
+    return (response as List).map((row) => AudioPost.fromMap(row)).toList();
   }
 
   Stream<List<AudioPost>> watchFeed() {
     return _supabase
         .from('audio_posts')
         .stream(primaryKey: ['id'])
-        .order('created_at')
-        .map((rows) => rows.map((e) => AudioPost.fromMap(e)).toList());
+        .order('created_at', ascending: false)
+        .map((rows) => rows.map((row) => AudioPost.fromMap(row)).toList());
   }
 
   Future<List<AudioPost>> getMyPosts() async {
@@ -689,7 +803,7 @@ class SupabaseService {
         .eq('user_id', userId!)
         .order('created_at', ascending: false);
 
-    return (response as List).map((e) => AudioPost.fromMap(e)).toList();
+    return (response as List).map((row) => AudioPost.fromMap(row)).toList();
   }
 
   /*
@@ -884,10 +998,9 @@ String timeAgoFa(DateTime utcTime) {
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../core/repositories/audio_repository.dart';
 import '../../core/models/audio_post.dart';
-import '../map/widgets/audio_player_sheet.dart';
-import 'widgets/comment_sheet.dart';
 import 'widgets/voice_card.dart';
 
 class FeedScreen extends StatelessWidget {
@@ -898,13 +1011,16 @@ class FeedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("فید صداها")),
+      backgroundColor: Colors.transparent,
       body: StreamBuilder<List<AudioPost>>(
         stream: repository.watchFeed(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(
-              child: Text("خطا در بارگذاری فید: ${snapshot.error}"),
+            return const Center(
+              child: Text(
+                "خطا در بارگذاری فید",
+                style: TextStyle(color: Colors.white),
+              ),
             );
           }
 
@@ -915,42 +1031,93 @@ class FeedScreen extends StatelessWidget {
           final posts = snapshot.data!.reversed.toList();
 
           if (posts.isEmpty) {
-            return const Center(child: Text("هنوز صدایی ثبت نشده"));
+            return const Center(
+              child: Text(
+                "هنوز صدایی ثبت نشده",
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
 
-          return ListView.builder(
-            itemCount: posts.length,
-            itemBuilder: (_, index) {
-              final post = posts[index];
-
-              return VoiceCard(
-                post: post,
-                onPlay: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (_) => AudioPlayerSheet(post: post),
-                  );
-                },
-                onLike: () async {
-                  await repository.toggleLike(post.id);
-                },
-                onComment: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (_) => Padding(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).viewInsets.bottom,
-                      ),
-                      child: SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.7,
-                        child: CommentSheet(postId: post.id),
-                      ),
+          return Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xff0A0A0D),
+                  Color(0xff1B0B1A),
+                  Color(0xff31162B),
+                  Color(0xff0A0A0D),
+                ],
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -120,
+                  left: -50,
+                  child: Container(
+                    width: 260,
+                    height: 260,
+                    decoration: BoxDecoration(
+                      color: Colors.purpleAccent.withOpacity(.14),
+                      shape: BoxShape.circle,
                     ),
-                  );
-                },
-              );
-            },
+                  ),
+                ),
+
+                Positioned(
+                  top: 220,
+                  right: -80,
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: Colors.pinkAccent.withOpacity(.10),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+
+                Positioned(
+                  bottom: 140,
+                  left: -70,
+                  child: Container(
+                    width: 230,
+                    height: 230,
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.withOpacity(.10),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+
+                SafeArea(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(
+                      top: 28,
+                      left: 8,
+                      right: 8,
+                      bottom: 160,
+                    ),
+                    itemCount: posts.length,
+                    itemBuilder: (_, index) {
+                      final post = posts[index];
+
+                      return VoiceCard(
+                        post: post,
+                        onPlay: () async {
+                          await repository.playAudio(post.audioUrl);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -1019,75 +1186,189 @@ class _CommentSheetState extends State<CommentSheet> {
 }
 
 
+######## FILE: lib/features/feed/widgets/mini_player.dart ########
+
+import 'dart:async';
+import 'package:flutter/material.dart';
+import '../../../core/services/global_audio_player.dart';
+
+class MiniPlayer extends StatefulWidget {
+  const MiniPlayer({super.key});
+
+  @override
+  State<MiniPlayer> createState() => _MiniPlayerState();
+}
+
+class _MiniPlayerState extends State<MiniPlayer> {
+  final player = GlobalAudioPlayer();
+
+  StreamSubscription? sub;
+  Duration current = Duration.zero;
+  Duration total = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+
+    sub = player.positionStream.listen((position) {
+      if (!mounted) return;
+
+      setState(() {
+        current = position;
+        total = player.duration ?? Duration.zero;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    sub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (player.currentUrl == null || total == Duration.zero) {
+      return const SizedBox();
+    }
+
+    final progress = total.inMilliseconds == 0
+        ? 0.0
+        : current.inMilliseconds / total.inMilliseconds;
+
+    return Positioned(
+      bottom: 82,
+      left: 14,
+      right: 14,
+      child: Container(
+        height: 76,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(.08),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white.withOpacity(.15)),
+        ),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () async {
+                if (player.isPlaying) {
+                  await player.pause();
+                } else {
+                  await player.player.play();
+                }
+
+                setState(() {});
+              },
+              child: Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                ),
+                child: Icon(
+                  player.isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 14),
+
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: LinearProgressIndicator(value: progress, minHeight: 5),
+              ),
+            ),
+
+            const SizedBox(width: 14),
+
+            const Icon(Icons.favorite_border, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
 ######## FILE: lib/features/feed/widgets/voice_card.dart ########
 
 import 'package:flutter/material.dart';
 import '../../../core/models/audio_post.dart';
-import '../../../core/utils/time_format.dart';
 
 class VoiceCard extends StatelessWidget {
   final AudioPost post;
   final VoidCallback onPlay;
-  final VoidCallback onLike;
-  final VoidCallback onComment;
 
-  const VoiceCard({
-    super.key,
-    required this.post,
-    required this.onPlay,
-    required this.onLike,
-    required this.onComment,
-  });
+  const VoiceCard({super.key, required this.post, required this.onPlay});
+
+  String formatDuration(int sec) {
+    final minutes = sec ~/ 60;
+    final seconds = sec % 60;
+
+    return "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
+    return GestureDetector(
+      onTap: onPlay,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        child: Row(
           children: [
-            Row(
-              children: [
-                const CircleAvatar(child: Icon(Icons.graphic_eq)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(post.city, style: const TextStyle(fontSize: 16)),
-                      Text(
-                        timeAgoFa(post.createdAt),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text("${post.duration}s"),
-              ],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: post.coverImage.isNotEmpty
+                  ? Image.network(
+                      post.coverImage,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: 72,
+                      height: 72,
+                      color: Colors.white10,
+                      child: const Icon(Icons.graphic_eq, size: 30),
+                    ),
             ),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                IconButton(
-                  onPressed: onPlay,
-                  icon: const Icon(Icons.play_arrow),
-                ),
-                IconButton(
-                  onPressed: onLike,
-                  icon: Icon(
-                    post.isLiked ? Icons.favorite : Icons.favorite_border,
+
+            const SizedBox(width: 16),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    post.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                IconButton(
-                  onPressed: onComment,
-                  icon: const Icon(Icons.comment),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    post.creatorName,
+                    style: const TextStyle(fontSize: 14, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+
+            Text(
+              formatDuration(post.duration),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white70,
+              ),
             ),
           ],
         ),
@@ -1181,7 +1462,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 
 import '../controller/map_controller.dart';
-import '../widgets/audio_player_sheet.dart';
 
 class MapScreen extends StatelessWidget {
   MapScreen({super.key});
@@ -1214,21 +1494,13 @@ class MapScreen extends StatelessWidget {
                     zoomToBoundsOnClick: true,
                     spiderfyCluster: true,
                     markers: controller.audioPosts.map((post) {
-                      // قبلاً: post.lat, post.lng -> این فیلدها وجود ندارند
-                      // الان: post.latitude, post.longitude (طبق AudioPost واقعی)
                       return Marker(
                         point: LatLng(post.latitude, post.longitude),
                         width: 50,
                         height: 50,
                         child: GestureDetector(
-                          onTap: () {
-                            showModalBottomSheet(
-                              context: context,
-                              // قبلاً: AudioPlayerSheet(post: post, onPlay: ..., onStop: ...)
-                              // الان: AudioPlayerSheet فقط post می‌گیرد؛ پخش را خودش
-                              // از طریق GlobalAudioPlayer مدیریت می‌کند.
-                              builder: (_) => AudioPlayerSheet(post: post),
-                            );
+                          onTap: () async {
+                            await controller.playAudio(post.audioUrl);
                           },
                           child: const Icon(
                             Icons.graphic_eq,

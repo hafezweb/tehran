@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:just_audio/just_audio.dart';
 
 class AudioService {
   final AudioRecorder _recorder = AudioRecorder();
@@ -27,13 +28,24 @@ class AudioService {
     isRecording = true;
 
     _timer?.cancel();
-    _timer = Timer(const Duration(seconds: 90), () async {
+    _timer = Timer(const Duration(seconds: 600), () async {
       if (isRecording) {
         await stopRecording();
       }
     });
 
     return true;
+  }
+
+  Future<int> getAudioDuration(String path) async {
+    final player = AudioPlayer();
+    await player.setFilePath(path);
+
+    final duration = player.duration?.inSeconds ?? 0;
+
+    await player.dispose();
+
+    return duration;
   }
 
   Future<String?> stopRecording() async {

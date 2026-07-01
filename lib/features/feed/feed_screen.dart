@@ -30,7 +30,7 @@ class FeedScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final posts = snapshot.data!.reversed.toList();
+          final posts = snapshot.data!;
 
           if (posts.isEmpty) {
             return const Center(

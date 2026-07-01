@@ -73,22 +73,31 @@ class MapScreen extends StatelessWidget {
                 ),
               ],
             ),
+
             if (controller.isLoading.value)
               const Center(child: CircularProgressIndicator()),
           ],
         );
       }),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton(
-            heroTag: "loc",
-            onPressed: controller.goToUserLocation,
-            child: const Icon(Icons.my_location),
-          ),
-          const SizedBox(height: 10),
-          Obx(
-            () => FloatingActionButton(
+
+      // FABs فقط وقتی player فعال نیست نمایش داده می‌شوند
+      floatingActionButton: Obx(() {
+        if (controller.hasActivePlayer) {
+          return const SizedBox();
+        }
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingActionButton(
+              heroTag: "loc",
+              onPressed: controller.goToUserLocation,
+              child: const Icon(Icons.my_location),
+            ),
+
+            const SizedBox(height: 10),
+
+            FloatingActionButton(
               heroTag: "rec",
               backgroundColor: controller.isRecordingAudio.value
                   ? Colors.red
@@ -104,9 +113,9 @@ class MapScreen extends StatelessWidget {
                 controller.isRecordingAudio.value ? Icons.stop : Icons.mic,
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 }
